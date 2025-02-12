@@ -8,11 +8,15 @@ import (
 // -> https://pkg.go.dev/net#pkg-examples
 // -> https://itsfuad.medium.com/understanding-http-at-a-low-level-a-developers-guide-with-c-213728d6c41d
 
-// Create a struct that is capeable to stablish a connection using TCP/IP protocol from net package.
-// This struct shoul be able to handle clients to connect in they open socket IP connection and response the request client
+// Create a struct that is capeable to stablish a connection using TCP/IP protocol from net package. DONE
+// This struct shoul be able to handle clients to connect in they open socket IP connection and response the request client  DONE
 
-// Start small, just create the server, connect into a PORT and try connect in this port as client e return OK every time a
-// client request comes.
+// Make this server accept HTTP requests and read thoose requests
+// Make the server be able to parse queryParams
+// Make the server be able to response with HTTP response format
+
+// Make the server be able to parse bodyParams
+// Make this server be able differ from POST, GET, PUT, PATCH, DELETE methods
 
 func NewServer() *Server {
 	return &Server{}
