@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch pihttp example server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/pihttp/example/server/server_main.go",
+    },
+    {
+      "name": "Launch pihttp example client",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/pihttp/example/client/client_main.go",
+    },
+  ]
+}
