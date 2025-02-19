@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -28,9 +29,23 @@ func doHTTPRequest() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	defer res.Body.Close()
+
+	resBodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalf("Client error on res.Body.Read err: %s", err)
+	}
+
 	log.Printf("Client got content length %d", res.ContentLength)
 	log.Printf("Client got statusCode %d", res.StatusCode)
 
+	for headerKey, headerVal := range res.Header {
+		for _, val := range headerVal {
+			log.Printf("Client got Header %s: %s", headerKey, val)
+		}
+	}
+
+	log.Printf("Client got body %s", string(resBodyBytes))
 }
 
 func doTCPRequest() {
