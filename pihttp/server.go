@@ -23,6 +23,12 @@ import (
 const (
 	DefaultWriteBufferSize = 4096
 	DefaultReadBufferSize  = 4096
+
+	// carrieage return = \r
+	// line feed = \n
+	lineBreak = "\r\n"
+	// single space = SP
+	space = " "
 )
 
 func NewServer() *Server {
@@ -74,13 +80,54 @@ func (s *Server) handleConn(conn net.Conn) {
 	log.Printf("Client request - number of bytes read from the conn: %d", nReaded)
 	log.Printf("Client request - %s", string(buffer[:nReaded]))
 
+	req := s.parseRequest(buffer[:nReaded])
+
+	log.Print("Request Line Method: ", req.method)
+	log.Print("Request Line URI: ", req.uri)
+	log.Print("Request Line HTTP Version: ", req.httpVersion)
+
 	s.writeResp(conn)
+}
+
+type requestLine struct {
+	method      string
+	uri         string
+	httpVersion string
+}
+
+func parseRequestLine(requestLineStr string) requestLine {
+	requestLineStr = strings.TrimSuffix(requestLineStr, lineBreak)
+	requestLineSplit := strings.Split(requestLineStr, space)
+
+	if len(requestLineSplit) < 3 {
+		log.Fatal("uneexpected request line format: expected to have 3 elements inside of requestLineSplit")
+	}
+
+	return requestLine{
+		method:      requestLineSplit[0],
+		uri:         requestLineSplit[1],
+		httpVersion: requestLineSplit[2],
+	}
+}
+
+type request struct {
+	requestLine
 }
 
 // reading HTTP RFC -> https://www.rfc-editor.org/rfc/rfc1945.html#section-5
 // SECTION THAT DEFINE A HTTP REQUEST FORMAT
-func (s *Server) parseRequest() {
-	// "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Go-http-client/1.1\r\nAccept-Encoding: gzip\r\n\r\n"
+func (s *Server) parseRequest(req []byte) request {
+	// "GET / HTTP/1.1\r\n
+	// Host: localhost:8080\r\n
+	// User-Agent: Go-http-client/1.1\r\n
+	// Accept-Encoding: gzip\r\n
+	// \r\n"
+
+	reqStr := string(req)
+
+	reqSplitedByLineBreak := strings.Split(reqStr, lineBreak)
+
+	requestLine := parseRequestLine(reqSplitedByLineBreak[0])
 
 	// HTTP REQUEST FORMAT
 	// Request-Line = Method SP Request-URI SP HTTP-Version CRLF
@@ -88,7 +135,9 @@ func (s *Server) parseRequest() {
 	// if a higher version request is received, the
 	//  proxy/gateway must either downgrade the request version or respond
 	//  with an error.
-
+	return request{
+		requestLine: requestLine,
+	}
 }
 
 type response struct {
