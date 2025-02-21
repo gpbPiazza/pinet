@@ -110,8 +110,38 @@ func parseRequestLine(requestLineStr string) requestLine {
 	}
 }
 
+// key value pair
+// headers can have repetitive key names, if so,
+// this values will me concatenated into the same key
+type header map[string][]string
+
+// User-Agent: Go-http-client/1.1
+// Accept-Encoding: gzip
+// Times-Do-RJ: fla, flu, vasco
+// Times-Do-RJ: botafogo
+// Accept-Encoding: gremio
+func parseHeaders(headersStr []string) header {
+	keyValSeparator := ":"
+	header := make(header, len(headersStr))
+
+	for _, headerStr := range headersStr {
+		headerSplit := strings.Split(headerStr, keyValSeparator)
+		key := headerSplit[0]
+		val := headerSplit[1]
+
+		// manyVals := strings.Split(val, ",")
+
+		val = strings.TrimPrefix(val, space)
+
+		header[key] = append(header[key], val)
+	}
+
+	return header
+}
+
 type request struct {
 	requestLine
+	header header
 }
 
 // reading HTTP RFC -> https://www.rfc-editor.org/rfc/rfc1945.html#section-5
@@ -125,9 +155,23 @@ func (s *Server) parseRequest(req []byte) request {
 
 	reqStr := string(req)
 
-	reqSplitedByLineBreak := strings.Split(reqStr, lineBreak)
+	reqByLineBreak := strings.Split(reqStr, lineBreak)
 
-	requestLine := parseRequestLine(reqSplitedByLineBreak[0])
+	requestLineStr := reqByLineBreak[0]
+
+	headersAndEntityBody := reqByLineBreak[0:]
+
+	var headers []string
+	// var entityBody string
+	for _, reqVal := range headersAndEntityBody {
+		if reqVal != lineBreak {
+			headers = append(headers, strings.TrimSuffix(reqVal, lineBreak))
+		}
+		// TODO não sei como que vem o body ainda...
+	}
+
+	requestLine := parseRequestLine(requestLineStr)
+	header := parseHeaders(headers)
 
 	// HTTP REQUEST FORMAT
 	// Request-Line = Method SP Request-URI SP HTTP-Version CRLF
@@ -137,6 +181,7 @@ func (s *Server) parseRequest(req []byte) request {
 	//  with an error.
 	return request{
 		requestLine: requestLine,
+		header:      header,
 	}
 }
 
