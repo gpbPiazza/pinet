@@ -1,4 +1,10 @@
 ## About HTTP request and response formats
+
+
+https://www.rfc-editor.org/rfc/rfc9110.html
+
+https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+
   //  After receiving and interpreting a request message, a server responds
 	//  in the form of an HTTP response message.
 	//  Response        = Simple-Response | Full-Response

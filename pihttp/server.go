@@ -49,7 +49,7 @@ func (s *Server) Start() {
 
 	defer func() {
 		if err := listener.Close(); err != nil {
-			log.Printf("Server - error on listener close err: %s", err)
+			log.Fatalf("Server - error on listener close err: %s", err)
 		}
 	}()
 
@@ -121,15 +121,21 @@ type header map[string][]string
 // Times-Do-RJ: botafogo
 // Accept-Encoding: gremio
 func parseHeaders(headersStr []string) header {
-	keyValSeparator := ":"
+	keyValSeparator := ": "
 	header := make(header, len(headersStr))
 
 	for _, headerStr := range headersStr {
+		if headerStr == "" {
+			continue
+		}
 		headerSplit := strings.Split(headerStr, keyValSeparator)
+		if len(headerSplit) != 2 {
+			log.Printf("header split in unexpected format -> headerStr: %s", headerStr)
+			continue
+		}
+
 		key := headerSplit[0]
 		val := headerSplit[1]
-
-		// manyVals := strings.Split(val, ",")
 
 		val = strings.TrimPrefix(val, space)
 
@@ -147,19 +153,13 @@ type request struct {
 // reading HTTP RFC -> https://www.rfc-editor.org/rfc/rfc1945.html#section-5
 // SECTION THAT DEFINE A HTTP REQUEST FORMAT
 func (s *Server) parseRequest(req []byte) request {
-	// "GET / HTTP/1.1\r\n
-	// Host: localhost:8080\r\n
-	// User-Agent: Go-http-client/1.1\r\n
-	// Accept-Encoding: gzip\r\n
-	// \r\n"
-
 	reqStr := string(req)
 
 	reqByLineBreak := strings.Split(reqStr, lineBreak)
 
 	requestLineStr := reqByLineBreak[0]
 
-	headersAndEntityBody := reqByLineBreak[0:]
+	headersAndEntityBody := reqByLineBreak[1:]
 
 	var headers []string
 	// var entityBody string
@@ -171,6 +171,7 @@ func (s *Server) parseRequest(req []byte) request {
 	}
 
 	requestLine := parseRequestLine(requestLineStr)
+
 	header := parseHeaders(headers)
 
 	// HTTP REQUEST FORMAT

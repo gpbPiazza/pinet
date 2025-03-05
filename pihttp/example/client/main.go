@@ -25,9 +25,18 @@ func main() {
 }
 
 func doHTTPRequest() {
-	res, err := http.Get("http://localhost:8080")
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatalf("error on new request ctor err: %s", err)
+	}
+
+	req.Header.Add("Times-Do-RJ", "flu")
+	req.Header.Add("Times-Do-RJ", "fla")
+	req.Header.Add("Times-Do-RJ", "fogão")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("error on sending http request err: %s", err)
 	}
 	defer res.Body.Close()
 
