@@ -10,14 +10,7 @@ import (
 // -> https://pkg.go.dev/net#pkg-examples
 // -> https://itsfuad.medium.com/understanding-http-at-a-low-level-a-developers-guide-with-c-213728d6c41d
 
-// Create a struct that is capeable to stablish a connection using TCP/IP protocol from net package. DONE
-// This struct shoul be able to handle clients to connect in they open socket IP connection and response the request client  DONE
-
-// Make this server accept HTTP requests and read thoose requests
-// Make the server be able to parse queryParams
 // Make the server be able to response with HTTP response format
-
-// Make the server be able to parse bodyParams
 // Make this server be able differ from POST, GET, PUT, PATCH, DELETE methods
 
 const (
@@ -82,116 +75,11 @@ func (s *Server) handleConn(conn net.Conn) {
 
 	req := s.parseRequest(buffer[:nReaded])
 
-	log.Print("Request Line Method: ", req.method)
-	log.Print("Request Line URI: ", req.uri)
-	log.Print("Request Line HTTP Version: ", req.httpVersion)
+	log.Print("Request Line Method: ", req.Method)
+	log.Print("Request Line URI: ", req.Uri)
+	log.Print("Request Line HTTP Version: ", req.HttpVersion)
 
 	s.writeResp(conn)
-}
-
-type requestLine struct {
-	method      string
-	uri         string
-	httpVersion string
-}
-
-func parseRequestLine(requestLineStr string) requestLine {
-	requestLineStr = strings.TrimSuffix(requestLineStr, lineBreak)
-	requestLineSplit := strings.Split(requestLineStr, space)
-
-	if len(requestLineSplit) < 3 {
-		log.Fatal("uneexpected request line format: expected to have 3 elements inside of requestLineSplit")
-	}
-
-	return requestLine{
-		method:      requestLineSplit[0],
-		uri:         requestLineSplit[1],
-		httpVersion: requestLineSplit[2],
-	}
-}
-
-// key value pair
-// headers can have repetitive key names, if so,
-// this values will me concatenated into the same key
-type header map[string][]string
-
-// User-Agent: Go-http-client/1.1
-// Accept-Encoding: gzip
-// Times-Do-RJ: fla, flu, vasco
-// Times-Do-RJ: botafogo
-// Accept-Encoding: gremio
-func parseHeaders(headersStr []string) header {
-	keyValSeparator := ": "
-	header := make(header, len(headersStr))
-
-	for _, headerStr := range headersStr {
-		if headerStr == "" {
-			continue
-		}
-		headerSplit := strings.Split(headerStr, keyValSeparator)
-		if len(headerSplit) != 2 {
-			log.Printf("header split in unexpected format -> headerStr: %s", headerStr)
-			continue
-		}
-
-		key := headerSplit[0]
-		val := headerSplit[1]
-
-		val = strings.TrimPrefix(val, space)
-
-		header[key] = append(header[key], val)
-	}
-
-	return header
-}
-
-type request struct {
-	requestLine
-	header header
-}
-
-// reading HTTP RFC -> https://www.rfc-editor.org/rfc/rfc1945.html#section-5
-// SECTION THAT DEFINE A HTTP REQUEST FORMAT
-func (s *Server) parseRequest(req []byte) request {
-	reqStr := string(req)
-
-	reqByLineBreak := strings.Split(reqStr, lineBreak)
-
-	requestLineStr := reqByLineBreak[0]
-
-	headersAndEntityBody := reqByLineBreak[1:]
-
-	var headers []string
-	// var entityBody string
-	for _, reqVal := range headersAndEntityBody {
-		if reqVal != lineBreak {
-			headers = append(headers, strings.TrimSuffix(reqVal, lineBreak))
-		}
-		// TODO não sei como que vem o body ainda...
-	}
-
-	requestLine := parseRequestLine(requestLineStr)
-
-	header := parseHeaders(headers)
-
-	// HTTP REQUEST FORMAT
-	// Request-Line = Method SP Request-URI SP HTTP-Version CRLF
-
-	// if a higher version request is received, the
-	//  proxy/gateway must either downgrade the request version or respond
-	//  with an error.
-	return request{
-		requestLine: requestLine,
-		header:      header,
-	}
-}
-
-type response struct {
-	statusLine     string
-	generalHeader  string
-	responseHeader string
-	entityHeader   string
-	entityBody     string
 }
 
 func (s *Server) writeResp(conn net.Conn) {
@@ -218,4 +106,16 @@ func (s *Server) writeResp(conn net.Conn) {
 		log.Fatalf("Server - error on Write client conn err: %s", err)
 	}
 	log.Printf("Server - number of bytes successfully written into conn: %d", nWritten)
+}
+
+type Handler func(req Request, resp *Response) error
+
+func (s *Server) HandleFunc(method, path string, handler Handler) {
+	// map[method+path]handler
+
+	// handleConn
+	// faz parse
+	// pega method+path
+	// executam handler
+	// parse clientResponse
 }

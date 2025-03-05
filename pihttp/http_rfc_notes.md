@@ -5,6 +5,13 @@ https://www.rfc-editor.org/rfc/rfc9110.html
 
 https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
 
+// reading HTTP RFC -> https://www.rfc-editor.org/rfc/rfc1945.html#section-5
+// SECTION THAT DEFINE A HTTP REQUEST FORMAT
+
+	// if a higher version request is received, the
+	//  proxy/gateway must either downgrade the request version or respond
+	//  with an error.
+
   //  After receiving and interpreting a request message, a server responds
 	//  in the form of an HTTP response message.
 	//  Response        = Simple-Response | Full-Response
