@@ -17,7 +17,7 @@ func main() {
 		return nil
 	})
 
-	s.HandleFunc(http.MethodPost, "/text-time", func(req pihttp.Request, resp *pihttp.Response) error {
+	s.HandleFunc(http.MethodPost, "/time", func(req pihttp.Request, resp *pihttp.Response) error {
 		// `{"nome": "vamo gremio", "eh_os_guri": true, "torcedor_maluco_ids": [1,2,3,4,5]}`
 		type TextTimeBody struct {
 			Nome                string `json:"Nome"`

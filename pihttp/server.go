@@ -51,7 +51,14 @@ var AllMethods = []string{
 }
 
 func NewServer() *Server {
-	return &Server{}
+	s := &Server{}
+
+	s.routes = make(map[string]map[string]Handler)
+	for _, method := range AllMethods {
+		s.routes[method] = make(map[string]Handler)
+	}
+
+	return s
 }
 
 type Server struct {
@@ -59,11 +66,6 @@ type Server struct {
 }
 
 func (s *Server) Start() {
-	s.routes = make(map[string]map[string]Handler)
-	for _, method := range AllMethods {
-		s.routes[method] = make(map[string]Handler)
-	}
-
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("Server - error on create listener conn err: %s", err)
@@ -109,12 +111,14 @@ func (s *Server) handleConn(conn net.Conn) {
 
 	handlerByRoute, ok := s.routes[req.Method]
 	if !ok {
-		log.Printf("request method not registered in routes map. Received request method: %s", req.Method)
+		// TODO: implement not found route resp
+		log.Fatalf("request method not registered in routes map. Received request method: %s", req.Method)
 	}
 
-	handler, ok := handlerByRoute[req.Uri]
+	handler, ok := handlerByRoute[req.Path]
 	if !ok {
-		log.Printf("request URI not registered in routes map. Received request path: %s", req.Uri)
+		// TODO: implement not found route resp
+		log.Fatalf("request Path not registered in routes map. Received request Path: %s", req.Path)
 	}
 
 	resp := new(Response)
@@ -123,10 +127,10 @@ func (s *Server) handleConn(conn net.Conn) {
 		log.Printf("errro from client handler err: %s", err)
 	}
 
-	s.writeResp(conn)
+	s.writeResp(conn, *resp)
 }
 
-func (s *Server) writeResp(conn net.Conn) {
+func (s *Server) writeResp(conn net.Conn, resp Response) {
 	strBuilder := new(strings.Builder)
 
 	entityBody := `
@@ -155,11 +159,5 @@ func (s *Server) writeResp(conn net.Conn) {
 type Handler func(req Request, resp *Response) error
 
 func (s *Server) HandleFunc(method, path string, handler Handler) {
-	// map[method+path]handler
-
-	// handleConn
-	// faz parse
-	// pega method+path
-	// executam handler
-	// parse clientResponse
+	s.routes[method][path] = handler
 }

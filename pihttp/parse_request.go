@@ -32,7 +32,9 @@ func (s *Server) parseRequest(req []byte) Request {
 		requestLine: requestLine,
 		Headers:     parseHeaders(reqByLineBreak[startHeadersIndex:endHeadersIndex]),
 		RawQuery:    requestLine.RawQuery(),
-		EntityBody:  []byte(reqByLineBreak[entityBodyIndex]),
+		// TODO: FIX THIS -> IN THE server implementation of json unmarshall he got
+		// 2025/03/10 09:02:01 errro from client handler err: json: cannot unmarshal string into Go value of type main.TextTimeBody
+		EntityBody: []byte(reqByLineBreak[entityBodyIndex]),
 	}
 }
 
@@ -44,9 +46,19 @@ func parseRequestLine(requestLineStr string) requestLine {
 		log.Fatal("uneexpected request line format: expected to have 3 elements inside of requestLineSplit")
 	}
 
+	uri := requestLineSplit[1]
+
+	path, _, ok := strings.Cut(uri, queryDelimiter)
+	if !ok {
+		// TODO: validate if a request without queryParams will return not OK here
+		// I think that will because ? is optional
+		log.Printf("not OK in cut path from URI")
+	}
+
 	return requestLine{
 		Method:      requestLineSplit[0],
-		Uri:         requestLineSplit[1],
+		Uri:         uri,
+		Path:        path,
 		HttpVersion: requestLineSplit[2],
 	}
 }
