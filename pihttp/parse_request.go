@@ -7,6 +7,16 @@ import (
 
 func (s *Server) parseRequest(req []byte) Request {
 	// TODO: IMPLEMENT PATH PARAM PARSE
+
+	// when i do this i parse byts of 8bit patterns to
+	// decode to  UTF-8-encoded text, there is some way to work with req
+	// without parsing to UTF-8?
+	// OK there is, for all method using strings.Split, strings we can use
+	// bytes package
+	// for now I am ok with this unnecerring string parsing
+	// very go TODO to make, register some banch marking with stringds pakcage
+	// implement with bytes package and see if there is any significan change dont do this kind
+	// of encoding in middle of parsing request.
 	reqStr := string(req)
 
 	reqByLineBreak := strings.Split(reqStr, lineBreak)
@@ -22,7 +32,7 @@ func (s *Server) parseRequest(req []byte) Request {
 		requestLine: requestLine,
 		Headers:     parseHeaders(reqByLineBreak[startHeadersIndex:endHeadersIndex]),
 		RawQuery:    requestLine.RawQuery(),
-		EntityBody:  reqByLineBreak[entityBodyIndex],
+		EntityBody:  []byte(reqByLineBreak[entityBodyIndex]),
 	}
 }
 

@@ -4,5 +4,5 @@ type Request struct {
 	requestLine
 	Headers    header
 	RawQuery   string
-	EntityBody string
+	EntityBody []byte
 }
