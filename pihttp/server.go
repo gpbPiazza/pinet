@@ -19,19 +19,51 @@ const (
 
 	// carrieage return = \r
 	// line feed = \n
+	// carrieage return + line feed = CL
 	lineBreak = "\r\n"
+
 	// single space = SP
 	space = " "
 )
+
+const (
+	MethodGet     = "GET"
+	MethodHead    = "HEAD"
+	MethodPost    = "POST"
+	MethodPut     = "PUT"
+	MethodPatch   = "PATCH"
+	MethodDelete  = "DELETE"
+	MethodConnect = "CONNECT"
+	MethodOptions = "OPTIONS"
+	MethodTrace   = "TRACE"
+)
+
+var AllMethods = []string{
+	MethodGet,
+	MethodHead,
+	MethodPost,
+	MethodPut,
+	MethodPatch,
+	MethodDelete,
+	MethodConnect,
+	MethodOptions,
+	MethodTrace,
+}
 
 func NewServer() *Server {
 	return &Server{}
 }
 
 type Server struct {
+	routes map[string]map[string]Handler
 }
 
 func (s *Server) Start() {
+	s.routes = make(map[string]map[string]Handler)
+	for _, method := range AllMethods {
+		s.routes[method] = make(map[string]Handler)
+	}
+
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("Server - error on create listener conn err: %s", err)
@@ -75,9 +107,21 @@ func (s *Server) handleConn(conn net.Conn) {
 
 	req := s.parseRequest(buffer[:nReaded])
 
-	log.Print("Request Line Method: ", req.Method)
-	log.Print("Request Line URI: ", req.Uri)
-	log.Print("Request Line HTTP Version: ", req.HttpVersion)
+	handlerByRoute, ok := s.routes[req.Method]
+	if !ok {
+		log.Printf("request method not registered in routes map. Received request method: %s", req.Method)
+	}
+
+	handler, ok := handlerByRoute[req.Uri]
+	if !ok {
+		log.Printf("request URI not registered in routes map. Received request path: %s", req.Uri)
+	}
+
+	resp := new(Response)
+	if err := handler(req, resp); err != nil {
+		// TODO: implement write response in error cases
+		log.Printf("errro from client handler err: %s", err)
+	}
 
 	s.writeResp(conn)
 }
