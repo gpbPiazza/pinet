@@ -1,7 +1,7 @@
 package pihttp
 
 type Response struct {
-	Header     header
+	Header     Header
 	StatusCode int
 	Body       any
 	// statusLine     string

@@ -24,9 +24,7 @@ const (
 
 	// single space = SP
 	space = " "
-)
 
-const (
 	MethodGet     = "GET"
 	MethodHead    = "HEAD"
 	MethodPost    = "POST"
@@ -38,17 +36,22 @@ const (
 	MethodTrace   = "TRACE"
 )
 
-var AllMethods = []string{
-	MethodGet,
-	MethodHead,
-	MethodPost,
-	MethodPut,
-	MethodPatch,
-	MethodDelete,
-	MethodConnect,
-	MethodOptions,
-	MethodTrace,
-}
+var (
+	lineBreakBytes = []byte(lineBreak)
+	spaceBytes     = []byte(space)
+
+	AllMethods = []string{
+		MethodGet,
+		MethodHead,
+		MethodPost,
+		MethodPut,
+		MethodPatch,
+		MethodDelete,
+		MethodConnect,
+		MethodOptions,
+		MethodTrace,
+	}
+)
 
 func NewServer() *Server {
 	s := &Server{}
@@ -121,13 +124,19 @@ func (s *Server) handleConn(conn net.Conn) {
 		log.Fatalf("request Path not registered in routes map. Received request Path: %s", req.Path)
 	}
 
-	resp := new(Response)
+	resp := newResp()
 	if err := handler(req, resp); err != nil {
 		// TODO: implement write response in error cases
 		log.Printf("errro from client handler err: %s", err)
 	}
 
 	s.writeResp(conn, *resp)
+}
+
+func newResp() *Response {
+	resp := new(Response)
+	resp.Header = make(Header)
+	return resp
 }
 
 func (s *Server) writeResp(conn net.Conn, resp Response) {

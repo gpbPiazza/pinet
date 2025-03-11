@@ -6,6 +6,10 @@ const (
 	queryDelimiter = "?"
 )
 
+var (
+	queryDelimiterBytes = []byte(queryDelimiter)
+)
+
 type requestLine struct {
 	Method      string
 	Uri         string

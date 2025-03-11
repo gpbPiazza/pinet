@@ -38,7 +38,7 @@ func doGetHTTPRequest() {
 	urlVal.Add("estadios_ids", "3")
 	urlVal.Add("data_jogo", "02/05/2025")
 
-	endpoint := "http://localhost:8080" + "?" + urlVal.Encode()
+	endpoint := "http://localhost:8080/text-time" + "?" + urlVal.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -85,8 +85,11 @@ func doPostHTTPRequest() {
 	host := "http://localhost:8080"
 	url := host + "/" + resource + "?" + urlVal.Encode()
 
-	body := `{"nome": "vamo gremio", "eh_os_guri": true, "torcedor_maluco_ids": [1,2,3,4,5]}`
-
+	body := map[string]interface{}{
+		"nome":                "vamo gremio",
+		"eh_os_guri":          true,
+		"torcedor_maluco_ids": []int{1, 2, 3, 4, 5},
+	}
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
 		log.Fatalf("error jsonMarshal err: %s", err)

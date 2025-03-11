@@ -2,7 +2,7 @@ package pihttp
 
 type Request struct {
 	requestLine
-	Headers    header
+	Headers    Header
 	RawQuery   string
 	EntityBody []byte
 }

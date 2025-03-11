@@ -21,8 +21,8 @@ func main() {
 		// `{"nome": "vamo gremio", "eh_os_guri": true, "torcedor_maluco_ids": [1,2,3,4,5]}`
 		type TextTimeBody struct {
 			Nome                string `json:"Nome"`
-			Eh_os_guri          string `json:"eh_os_guri"`
-			Torcedor_maluco_ids string `json:"torcedor_maluco_ids"`
+			Eh_os_guri          bool   `json:"eh_os_guri"`
+			Torcedor_maluco_ids []int  `json:"torcedor_maluco_ids"`
 		}
 
 		body := new(TextTimeBody)
@@ -31,7 +31,7 @@ func main() {
 			return err
 		}
 
-		log.Printf("received body -> %s - %s - %s", body.Eh_os_guri, body.Torcedor_maluco_ids, body.Nome)
+		log.Printf("received body -> %t - %v - %s", body.Eh_os_guri, body.Torcedor_maluco_ids, body.Nome)
 
 		respBody, err := json.Marshal(*body)
 		if err != nil {
