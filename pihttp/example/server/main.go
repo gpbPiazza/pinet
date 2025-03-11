@@ -17,6 +17,18 @@ func main() {
 		return nil
 	})
 
+	s.HandleFunc(http.MethodPost, "/text-time", func(req pihttp.Request, resp *pihttp.Response) error {
+		resp.Body = "POST text-time sending just text for get time"
+		resp.Header["Content-Type"] = []string{"text"}
+		return nil
+	})
+
+	s.HandleFunc(http.MethodDelete, "/text-time", func(req pihttp.Request, resp *pihttp.Response) error {
+		resp.Body = "DELETE text-time sending just text for get time"
+		resp.Header["Content-Type"] = []string{"text"}
+		return nil
+	})
+
 	s.HandleFunc(http.MethodPost, "/time", func(req pihttp.Request, resp *pihttp.Response) error {
 		// `{"nome": "vamo gremio", "eh_os_guri": true, "torcedor_maluco_ids": [1,2,3,4,5]}`
 		type TextTimeBody struct {

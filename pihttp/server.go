@@ -1,10 +1,8 @@
 package pihttp
 
 import (
-	"fmt"
 	"log"
 	"net"
-	"strings"
 )
 
 // -> https://pkg.go.dev/net#pkg-examples
@@ -140,25 +138,7 @@ func newResp() *Response {
 }
 
 func (s *Server) writeResp(conn net.Conn, resp Response) {
-	strBuilder := new(strings.Builder)
-
-	entityBody := `
-		<html>
-			<body>
-				<h1>Hello, World!</h1>
-			</body>
-		</html>
-	`
-
-	strBuilder.WriteString("HTTP/1.1 200 OK\r\n")
-	strBuilder.WriteString("Content-Type: text/html\r\n")
-	strBuilder.WriteString(fmt.Sprintf("Content-Length: %d\r\n", len([]byte(entityBody))))
-	strBuilder.WriteString("\r\n")
-	strBuilder.WriteString(entityBody)
-
-	res := strBuilder.String()
-
-	nWritten, err := conn.Write([]byte(res))
+	nWritten, err := conn.Write(resp.encode())
 	if err != nil {
 		log.Fatalf("Server - error on Write client conn err: %s", err)
 	}
