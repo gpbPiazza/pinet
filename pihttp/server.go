@@ -122,7 +122,7 @@ func (s *Server) handleConn(conn net.Conn) {
 		log.Fatalf("request Path not registered in routes map. Received request Path: %s", req.Path)
 	}
 
-	resp := newResp()
+	resp := newResp(req)
 	if err := handler(req, resp); err != nil {
 		// TODO: implement write response in error cases
 		log.Printf("errro from client handler err: %s", err)
@@ -131,9 +131,12 @@ func (s *Server) handleConn(conn net.Conn) {
 	s.writeResp(conn, *resp)
 }
 
-func newResp() *Response {
+func newResp(req Request) *Response {
 	resp := new(Response)
 	resp.Header = make(Header)
+
+	resp.httpVersion = req.HttpVersion
+
 	return resp
 }
 

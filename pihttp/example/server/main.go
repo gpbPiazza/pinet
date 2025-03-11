@@ -12,19 +12,19 @@ func main() {
 	s := pihttp.NewServer()
 
 	s.HandleFunc(http.MethodGet, "/text-time", func(req pihttp.Request, resp *pihttp.Response) error {
-		resp.Body = "Get Many times sending just text for get time"
+		resp.Body = []byte("Get Many times sending just text for get time")
 		resp.Header["Content-Type"] = []string{"text"}
 		return nil
 	})
 
 	s.HandleFunc(http.MethodPost, "/text-time", func(req pihttp.Request, resp *pihttp.Response) error {
-		resp.Body = "POST text-time sending just text for get time"
+		resp.Body = []byte("POST text-time sending just text for get time")
 		resp.Header["Content-Type"] = []string{"text"}
 		return nil
 	})
 
 	s.HandleFunc(http.MethodDelete, "/text-time", func(req pihttp.Request, resp *pihttp.Response) error {
-		resp.Body = "DELETE text-time sending just text for get time"
+		resp.Body = []byte("DELETE text-time sending just text for get time")
 		resp.Header["Content-Type"] = []string{"text"}
 		return nil
 	})

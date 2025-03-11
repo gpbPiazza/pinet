@@ -1,14 +1,16 @@
 package pihttp
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
+	"log"
 )
 
 type Response struct {
-	Header     Header
-	StatusCode int
-	Body       any
+	Header      Header
+	StatusCode  int
+	Body        []byte
+	httpVersion string
 	// statusLine     string
 	// generalHeader  string
 	// responseHeader string
@@ -16,7 +18,7 @@ type Response struct {
 	// entityBody     string
 }
 
-// encode will parse Response struct into valid http response format.
+// encode will encode Response struct into valid http response format to []byte.
 func (r *Response) encode() []byte {
 	// ITS IS MUST PASS:
 	// REQUEST LINE RESPONSE HTTP VERSION STATUS CODE STATUS MESSAGE
@@ -25,23 +27,69 @@ func (r *Response) encode() []byte {
 	// BREAK LINE
 	// ENTITYBody
 
-	strBuilder := new(strings.Builder)
+	respBuff := bytes.NewBuffer(nil)
 
-	entityBody := `
-		<html>
-			<body>
-				<h1>Hello, World!</h1>
-			</body>
-		</html>
-	`
+	// "HTTP/1.1 200 OK\r\n"
+	responseLine := fmt.Sprintf("%s%s%d%s%s", r.httpVersion, space, r.StatusCode, "OK", lineBreak)
+	_, err := respBuff.WriteString(responseLine)
+	if err != nil {
+		// TODO: i dont know if this should be a fatal from my lib
+		// probably this should be error wrapped to the client treat in some error response middleware
+		log.Fatalf("error on write respBuff RESPONSE LINE err: %s", err)
+	}
 
-	strBuilder.WriteString("HTTP/1.1 200 OK\r\n")
-	strBuilder.WriteString("Content-Type: text/html\r\n")
-	strBuilder.WriteString(fmt.Sprintf("Content-Length: %d\r\n", len([]byte(entityBody))))
-	strBuilder.WriteString("\r\n")
-	strBuilder.WriteString(entityBody)
+	hasContenTypeHeader := false
+	hasContenLengthHeader := false
+	for headerKey, headerVal := range r.Header {
+		if headerKey == "Cotent-Type" {
+			hasContenTypeHeader = true
+		}
+		if headerKey == "Content-Length" {
+			hasContenLengthHeader = true
+		}
 
-	res := strBuilder.String()
+		for _, val := range headerVal {
+			_, err := respBuff.WriteString(fmt.Sprintf("%s: %s%s", headerKey, val, lineBreak))
+			if err != nil {
+				// TODO: i dont know if this should be a fatal from my lib
+				// probably this should be error wrapped to the client treat in some error response middleware
+				log.Fatalf("error on write respBuff HEADERS err: %s", err)
+			}
+		}
+	}
 
-	return []byte(res)
+	if !hasContenLengthHeader {
+		_, err := respBuff.WriteString(fmt.Sprintf("Content-Length: %d\r\n", len(r.Body)))
+		if err != nil {
+			// TODO: i dont know if this should be a fatal from my lib
+			// probably this should be error wrapped to the client treat in some error response middleware
+			log.Fatalf("error on write respBuff HEADER CONTENT LENGTH err: %s", err)
+		}
+	}
+
+	if !hasContenTypeHeader {
+		// TODO identify type from resp
+		_, err := respBuff.WriteString("Content-Type: text/html\r\n")
+		if err != nil {
+			// TODO: i dont know if this should be a fatal from my lib
+			// probably this should be error wrapped to the client treat in some error response middleware
+			log.Fatalf("error on write respBuff HEADER CONTENT TYPE err: %s", err)
+		}
+	}
+
+	_, err = respBuff.Write(lineBreakBytes)
+	if err != nil {
+		// TODO: i dont know if this should be a fatal from my lib
+		// probably this should be error wrapped to the client treat in some error response middleware
+		log.Fatalf("error on write respBuff BreakLine Between end Headers and start entityBody err: %s", err)
+	}
+
+	_, err = respBuff.Write(r.Body)
+	if err != nil {
+		// TODO: i dont know if this should be a fatal from my lib
+		// probably this should be error wrapped to the client treat in some error response middleware
+		log.Fatalf("error on write respBuff ENTITYBODY err: %s", err)
+	}
+
+	return respBuff.Bytes()
 }
