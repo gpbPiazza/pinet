@@ -29,8 +29,7 @@ func (r *Response) encode() []byte {
 
 	respBuff := bytes.NewBuffer(nil)
 
-	// "HTTP/1.1 200 OK\r\n"
-	responseLine := fmt.Sprintf("%s%s%d%s%s", r.httpVersion, space, r.StatusCode, "OK", lineBreak)
+	responseLine := fmt.Sprintf("%s%s%d%s%s%s", r.httpVersion, space, r.StatusCode, space, statusText(r.StatusCode), lineBreak)
 	_, err := respBuff.WriteString(responseLine)
 	if err != nil {
 		// TODO: i dont know if this should be a fatal from my lib

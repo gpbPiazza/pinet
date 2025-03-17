@@ -53,6 +53,7 @@ func main() {
 
 		resp.Body = respBody
 		resp.Header["Content-Type"] = []string{"application/json"}
+		resp.StatusCode = http.StatusOK
 		return nil
 	})
 

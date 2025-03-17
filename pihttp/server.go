@@ -110,6 +110,11 @@ func (s *Server) handleConn(conn net.Conn) {
 
 	req := s.parseRequest(buffer[:nReaded])
 
+	// validateRequest
+	// if we have body and dont have ContentLenght header
+	// the server must return badrequest
+	// this validation is must for response struct too
+
 	handlerByRoute, ok := s.routes[req.Method]
 	if !ok {
 		// TODO: implement not found route resp
@@ -127,6 +132,8 @@ func (s *Server) handleConn(conn net.Conn) {
 		// TODO: implement write response in error cases
 		log.Printf("errro from client handler err: %s", err)
 	}
+
+	// All status code 1xx (informational), 204 (no content), and 304 (not modified) responses must not include a body.
 
 	s.writeResp(conn, *resp)
 }
