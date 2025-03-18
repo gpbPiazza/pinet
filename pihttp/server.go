@@ -14,6 +14,8 @@ import (
 const (
 	DefaultWriteBufferSize = 4096
 	DefaultReadBufferSize  = 4096
+	DefaultHTTPV1          = "1.0"
+	HTTP1V1                = "1.1"
 
 	// carrieage return = \r
 	// line feed = \n
@@ -51,19 +53,32 @@ var (
 	}
 )
 
-func NewServer() *Server {
-	s := &Server{}
+func NewServer(opts ...Option) *Server {
+	option := options{
+		httpV:           DefaultHTTPV1,
+		readBufferSize:  DefaultReadBufferSize,
+		writeBufferSize: DefaultWriteBufferSize,
+	}
 
-	s.routes = make(map[string]map[string]Handler)
-	for _, method := range AllMethods {
-		s.routes[method] = make(map[string]Handler)
+	for _, opt := range opts {
+		opt.apply(&option)
+	}
+
+	s := &Server{
+		routes:          make(map[string]map[string]Handler),
+		hhtpV:           option.httpV,
+		writeBufferSize: option.writeBufferSize,
+		readBufferSize:  option.readBufferSize,
 	}
 
 	return s
 }
 
 type Server struct {
-	routes map[string]map[string]Handler
+	routes          map[string]map[string]Handler
+	hhtpV           string
+	writeBufferSize int
+	readBufferSize  int
 }
 
 func (s *Server) Start() {
@@ -97,6 +112,7 @@ func (s *Server) handleConn(conn net.Conn) {
 			log.Printf("Server - error on close conn err: %s", err)
 		}
 	}()
+
 	log.Printf("Client CONN - Addr network: %s", conn.LocalAddr().Network())
 	log.Printf("Client CONN - literal Addrs: %s", conn.LocalAddr().String())
 
@@ -158,5 +174,11 @@ func (s *Server) writeResp(conn net.Conn, resp Response) {
 type Handler func(req Request, resp *Response) error
 
 func (s *Server) HandleFunc(method, path string, handler Handler) {
-	s.routes[method][path] = handler
+	handlersByPath, ok := s.routes[method]
+	if !ok {
+		handlersByPath = make(map[string]Handler)
+	}
+	handlersByPath[path] = handler
+
+	s.routes[method] = handlersByPath
 }
