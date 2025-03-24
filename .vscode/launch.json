@@ -18,5 +18,12 @@
         "http"
       ]
     },
+    {
+      "name": "Launch httpfromtcp",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/httpfromtcp/main.go"
+    },
   ]
 }
