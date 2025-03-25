@@ -128,24 +128,15 @@ func doPostHTTPRequest() {
 }
 
 func doTCPRequest() {
-	conn, err := net.Dial("tcp", "localhost:8080")
+	conn, err := net.Dial("tcp", "localhost:42069")
 	if err != nil {
 		log.Fatalf("Error connecting: %s", err)
 	}
 	defer conn.Close()
 
-	request := "E o que isso a feta o gremio??"
+	request := "Do you have what it takes to be an engineer at TheStartup™?\n"
 	_, err = conn.Write([]byte(request))
 	if err != nil {
 		log.Fatalf("Error writing to server: %s", err)
 	}
-
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		log.Fatalf("Error reading from server: %s", err)
-		return
-	}
-
-	log.Println("Server response:", string(buffer[:n]))
 }

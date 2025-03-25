@@ -4,24 +4,39 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
-	"os"
+	"net"
 	"strings"
 )
 
 func main() {
-	file, errOpen := os.OpenFile("messages.txt", os.O_RDONLY, fs.ModeType)
-	if errOpen != nil {
-		log.Fatalf("error on open file err: %s", errOpen)
+	listener, err := net.Listen("tcp", ":42069")
+	if err != nil {
+		log.Fatalf("Server - error on create listener conn err: %s", err)
 	}
 
-	lines := getLinesChannel(file)
+	defer func() {
+		if err := listener.Close(); err != nil {
+			log.Fatalf("Server - error on listener close err: %s", err)
+		}
+	}()
 
-	for line := range lines {
-		fmt.Printf("read: %s\n", line)
+	log.Printf("starting liestener at port: %d", 42069)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatalf("Server - error on accept conn err: %s", err)
+		}
+		log.Print("conn accepted")
+
+		lines := getLinesChannel(conn)
+
+		for line := range lines {
+			fmt.Printf("%s\n", line)
+		}
+
 	}
-	fmt.Printf("read: %s\n", "end")
 
 }
 
@@ -30,9 +45,11 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 
 	go func() {
 		defer func() {
+			log.Print("close chann and conn")
 			if err := f.Close(); err != nil {
-				log.Printf("err while reading closing file err: %s", err)
+				log.Printf("err while reading closing conn err: %s", err)
 			}
+			close(linesChan)
 		}()
 
 		var err error
@@ -40,8 +57,15 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 		for !errors.Is(err, io.EOF) {
 			data := make([]byte, 8)
 			_, err = f.Read(data)
-			if err != nil && !errors.Is(err, io.EOF) {
-				log.Printf("err while reading from file err: %s", err)
+			if errors.Is(err, io.EOF) {
+				line := strings.Join(parts, "")
+				linesChan <- line
+
+				break
+			}
+
+			if err != nil {
+				log.Printf("err while reading from conn err: %s", err.Error())
 			}
 
 			nLine := "\n"
@@ -49,8 +73,8 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 
 			lineSegments := strings.Split(dataStr, nLine)
 
-			hasLineCut := len(lineSegments) <= 1
-			if hasLineCut {
+			hasLineCut := len(lineSegments) > 1
+			if !hasLineCut {
 				parts = append(parts, dataStr)
 				continue
 			}
@@ -63,8 +87,6 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			parts = nil
 			parts = append(parts, lineSegments[1:]...)
 		}
-
-		close(linesChan)
 	}()
 
 	return linesChan
