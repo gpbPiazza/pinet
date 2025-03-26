@@ -1,4 +1,4 @@
-package main
+package httpfromtcp
 
 import (
 	"errors"
@@ -9,8 +9,23 @@ import (
 	"strings"
 )
 
-func main() {
-	listener, err := net.Listen("tcp", ":42069")
+type Server struct {
+}
+
+func NewServer(opts ...Option) *Server {
+	option := options{}
+
+	for _, opt := range opts {
+		opt.apply(&option)
+	}
+
+	s := &Server{}
+
+	return s
+}
+
+func (s *Server) Listen(address string) {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", address))
 	if err != nil {
 		log.Fatalf("Server - error on create listener conn err: %s", err)
 	}
