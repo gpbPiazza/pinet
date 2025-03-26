@@ -1,6 +1,6 @@
 package main
 
-import "github.com/gpbPiazza/pinet/httpfromtcp"
+import "github.com/gpbPiazza/httpfromtcp"
 
 func main() {
 	s := httpfromtcp.NewServer()

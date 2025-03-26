@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gpbPiazza/pinet/pihttp"
+	"github.com/gpbPiazza/pihttp"
 )
 
 func main() {
