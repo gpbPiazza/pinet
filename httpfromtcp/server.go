@@ -45,7 +45,7 @@ func (s *Server) Listen(address string) {
 		}
 		log.Print("conn accepted")
 
-		lines := getLinesChannel(conn)
+		lines := lines(conn)
 
 		for line := range lines {
 			fmt.Printf("%s\n", line)
@@ -55,7 +55,7 @@ func (s *Server) Listen(address string) {
 
 }
 
-func getLinesChannel(f io.ReadCloser) <-chan string {
+func lines(f io.ReadCloser) <-chan string {
 	linesChan := make(chan string)
 
 	go func() {
@@ -72,10 +72,10 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 		for !errors.Is(err, io.EOF) {
 			data := make([]byte, 8)
 			_, err = f.Read(data)
-			if errors.Is(err, io.EOF) {
-				line := strings.Join(parts, "")
-				linesChan <- line
+			dataStr := string(data)
 
+			if errors.Is(err, io.EOF) {
+				sendLine(linesChan, append(parts, dataStr))
 				break
 			}
 
@@ -84,7 +84,12 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			}
 
 			nLine := "\n"
-			dataStr := string(data)
+			nullByte := "\x00"
+
+			if strings.Contains(dataStr, nullByte) {
+				sendLine(linesChan, append(parts, dataStr))
+				break
+			}
 
 			lineSegments := strings.Split(dataStr, nLine)
 
@@ -95,9 +100,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			}
 
 			parts = append(parts, lineSegments[0])
-			line := strings.Join(parts, "")
-
-			linesChan <- line
+			sendLine(linesChan, parts)
 
 			parts = nil
 			parts = append(parts, lineSegments[1:]...)
@@ -105,4 +108,9 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 	}()
 
 	return linesChan
+}
+
+func sendLine(lines chan string, lineParts []string) {
+	line := strings.Join(lineParts, "")
+	lines <- line
 }
