@@ -72,6 +72,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	buff := make([]byte, buffSize)
 	for !request.isFullParsed {
 		nFromReader, err := reader.Read(buff)
+
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -82,9 +83,11 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 		buff = buff[:nFromReader]
 
-		newBuff := make([]byte, 2*len(buff))
-		if len(buff) == cap(buff) {
-			_ = copy(newBuff, buff)
+		isBufferFull := len(buff) == cap(buff)
+		if isBufferFull {
+			newBuff := make([]byte, 2*len(buff))
+			nCopy := copy(newBuff, buff)
+			buff = newBuff[:nCopy]
 		}
 
 		bytesReaded += nFromReader
@@ -92,7 +95,11 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		bytesParsed += n
+		if len(buff) > bytesParsed {
+			buff = buff[bytesParsed:]
+		}
 	}
 
 	return request, nil
@@ -123,8 +130,6 @@ func (r *Request) parse(data []byte) (int, error) {
 	return n, nil
 }
 
-// TODO: this implementation should parse data as
-// the data come from and not store the all data it self and only parse when has full data in
 func (r *Request) parseRequestLine(data []byte) (int, error) {
 	dataStr := string(data)
 	r.rawRequest += dataStr
@@ -153,10 +158,6 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 		return 0, err
 	}
 
-	if err := r.validateTarget(target); err != nil {
-		return 0, err
-	}
-
 	if err := r.validateHTTPVersion(fullHttpV, httpVSplited); err != nil {
 		return 0, err
 	}
@@ -166,6 +167,8 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 	r.RequestLine.HttpVersion = httpV
 	r.RequestLine.RequestTarget = target
 	r.RequestLine.Method = method
+
+	r.isFullParsed = true
 
 	return len(requestLine), nil
 }
@@ -185,10 +188,6 @@ func (r *Request) validateMethod(method string) error {
 		"request method unsported - method got %s - see AllMethods variable to suported methods",
 		method,
 	)
-}
-
-func (r *Request) validateTarget(target string) error {
-	return nil
 }
 
 func (r *Request) validateHTTPVersion(httpV string, httpVSplited []string) error {

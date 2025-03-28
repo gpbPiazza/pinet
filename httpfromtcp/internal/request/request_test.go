@@ -24,9 +24,11 @@ func TestRequestLineParse(t *testing.T) {
 	})
 
 	t.Run("Good request line with request targer", func(t *testing.T) {
+		data := "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"
+
 		reader := &chunkReader{
-			data:            "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-			numBytesPerRead: 1000,
+			data:            data,
+			numBytesPerRead: len(data),
 		}
 
 		r, err := RequestFromReader(reader)
@@ -41,7 +43,7 @@ func TestRequestLineParse(t *testing.T) {
 	t.Run("request line without http method", func(t *testing.T) {
 		reader := &chunkReader{
 			data:            "/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-			numBytesPerRead: 200,
+			numBytesPerRead: 10,
 		}
 
 		r, err := RequestFromReader(reader)
