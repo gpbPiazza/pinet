@@ -69,10 +69,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	buff := make([]byte, buffSize)
 	for !request.isFullParsed {
-
-		isBufferFull := len(buff) == cap(buff)
-
-		if isBufferFull {
+		if numBytesReaded >= len(buff) {
 			newBuff := make([]byte, 2*len(buff))
 			_ = copy(newBuff, buff)
 			buff = newBuff
@@ -164,7 +161,9 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 
 	r.isFullParsed = true
 
-	return len(requestLine), nil
+	numBytesParsed := idx + 2 // +2 due CRLF
+
+	return numBytesParsed, nil
 }
 
 func (r *Request) validateMethod(method string) error {
