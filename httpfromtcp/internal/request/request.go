@@ -19,7 +19,7 @@ const (
 	space    = " "
 	buffSize = 8
 
-	httpVersionSuported = "HTTP/1.1"
+	httpVSuported = "HTTP/1.1"
 
 	MethodGet     = "GET"
 	MethodHead    = "HEAD"
@@ -33,9 +33,6 @@ const (
 )
 
 var (
-	lineBreakBytes = []byte(crlf)
-	spaceBytes     = []byte(space)
-
 	AllMethods = []string{
 		MethodGet,
 		MethodHead,
@@ -128,11 +125,8 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 	}
 
 	requestLineText := string(data[:idx])
-
 	requestPerLine := strings.Split(requestLineText, crlf)
-
 	requestLine := requestPerLine[0]
-
 	requestLinePerSpace := strings.Split(requestLine, space)
 
 	if len(requestLinePerSpace) != 3 {
@@ -184,18 +178,15 @@ func (r *Request) validateMethod(method string) error {
 }
 
 func (r *Request) validateHTTPVersion(httpV string, httpVSplited []string) error {
-	// TODO: add valiadtion to ensure version is digit . digit
-	// now i am not looking if the version is a valid version
-
 	if len(httpVSplited) != 2 {
 		return errors.New("malformed http version expected <HTTP-NAME>/<digit>.<digit>")
 	}
 
-	if httpV != httpVersionSuported {
+	if httpV != httpVSuported {
 		return fmt.Errorf(
 			"unsoported http version - the httpVersion is %s and only httpVersion suported is %s",
 			httpV,
-			httpVersionSuported,
+			httpVSuported,
 		)
 	}
 

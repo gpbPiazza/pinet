@@ -1,12 +1,11 @@
 package httpfromtcp
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
-	"strings"
+
+	"github.com/gpbPiazza/httpfromtcp/internal/request"
 )
 
 type Server struct {
@@ -36,7 +35,7 @@ func (s *Server) Listen(address string) {
 		}
 	}()
 
-	log.Printf("starting liestener at port: %d", 42069)
+	log.Printf("starting listener at port: %d", 42069)
 
 	for {
 		conn, err := listener.Accept()
@@ -45,72 +44,14 @@ func (s *Server) Listen(address string) {
 		}
 		log.Print("conn accepted")
 
-		lines := lines(conn)
-
-		for line := range lines {
-			fmt.Printf("%s\n", line)
+		request, err := request.RequestFromReader(conn)
+		if err != nil {
+			log.Printf("error on parse request err: %s", err)
 		}
 
+		fmt.Print("Request line:\n")
+		fmt.Printf("- Method: %s\n", request.RequestLine.Method)
+		fmt.Printf("- Target: %s\n", request.RequestLine.RequestTarget)
+		fmt.Printf("- Version: %s\n", request.RequestLine.HttpVersion)
 	}
-
-}
-
-func lines(f io.ReadCloser) <-chan string {
-	linesChan := make(chan string)
-
-	go func() {
-		defer func() {
-			log.Print("close chann and conn")
-			if err := f.Close(); err != nil {
-				log.Printf("err while reading closing conn err: %s", err)
-			}
-			close(linesChan)
-		}()
-
-		var err error
-		var parts []string
-		for !errors.Is(err, io.EOF) {
-			data := make([]byte, 8)
-			_, err = f.Read(data)
-			dataStr := string(data)
-
-			if errors.Is(err, io.EOF) {
-				sendLine(linesChan, append(parts, dataStr))
-				break
-			}
-
-			if err != nil {
-				log.Printf("err while reading from conn err: %s", err.Error())
-			}
-
-			nLine := "\n"
-			nullByte := "\x00"
-
-			if strings.Contains(dataStr, nullByte) {
-				sendLine(linesChan, append(parts, dataStr))
-				break
-			}
-
-			lineSegments := strings.Split(dataStr, nLine)
-
-			hasLineCut := len(lineSegments) > 1
-			if !hasLineCut {
-				parts = append(parts, dataStr)
-				continue
-			}
-
-			parts = append(parts, lineSegments[0])
-			sendLine(linesChan, parts)
-
-			parts = nil
-			parts = append(parts, lineSegments[1:]...)
-		}
-	}()
-
-	return linesChan
-}
-
-func sendLine(lines chan string, lineParts []string) {
-	line := strings.Join(lineParts, "")
-	lines <- line
 }
