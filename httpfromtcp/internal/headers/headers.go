@@ -48,7 +48,12 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	key = strings.ToLower(key)
 	val = strings.TrimSpace(val)
 
-	h[key] = val
+	existingVal, ok := h[key]
+	if ok {
+		h[key] = fmt.Sprintf("%s, %s", existingVal, val)
+	} else {
+		h[key] = val
+	}
 
 	numBytesParsed := idx + 2
 
@@ -56,6 +61,8 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 }
 
 func (h Headers) valiadteKey(key string) error {
+	// see https://datatracker.ietf.org/doc/html/rfc9110#name-tokens
+
 	if strings.HasSuffix(key, space) {
 		return fmt.Errorf("malformed headers key - got key ending with space - header key: %s", key)
 	}

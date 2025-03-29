@@ -46,6 +46,36 @@ func TestHeadersParse(t *testing.T) {
 		assert.Equal(t, headers["content length"], "42069")
 	})
 
+	t.Run("valid headers same header appear must concat into the string", func(t *testing.T) {
+		headers := NewHeaders()
+		data := []byte("e-o-gremio: ta forte\r\n")
+
+		n, done, err := headers.Parse(data)
+
+		require.NoError(t, err)
+		require.False(t, done)
+		assert.Equal(t, 22, n)
+		assert.Equal(t, headers["e-o-gremio"], "ta forte")
+
+		data = []byte("e-o-gremio: é os guri\r\n")
+
+		n, done, err = headers.Parse(data)
+
+		require.NoError(t, err)
+		require.False(t, done)
+		assert.Equal(t, 24, n)
+		assert.Equal(t, headers["e-o-gremio"], "ta forte, é os guri")
+
+		data = []byte("e-o-gremio: gremiooo\r\n")
+
+		n, done, err = headers.Parse(data)
+
+		require.NoError(t, err)
+		require.False(t, done)
+		assert.Equal(t, 22, n)
+		assert.Equal(t, headers["e-o-gremio"], "ta forte, é os guri, gremiooo")
+	})
+
 	t.Run("always set key header to lower case", func(t *testing.T) {
 		headers := NewHeaders()
 		data := []byte("       VAMO GREMIO-PORRA!: 42069       \r\n\r\n")
