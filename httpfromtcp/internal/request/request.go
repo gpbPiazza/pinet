@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ const (
 	// carrieage return = \r
 	// line feed = \n
 	// carrieage return + line feed = CL
-	lineBreak = "\r\n"
+	crlf = "\r\n"
 
 	// single space = SP
 	space    = " "
@@ -32,7 +33,7 @@ const (
 )
 
 var (
-	lineBreakBytes = []byte(lineBreak)
+	lineBreakBytes = []byte(crlf)
 	spaceBytes     = []byte(space)
 
 	AllMethods = []string{
@@ -54,8 +55,6 @@ type Request struct {
 	// isFullParsed holds the state of a request
 	// while isFullParsed is false the request dint finish to parse yet
 	isFullParsed bool
-
-	rawRequest string
 }
 
 type RequestLine struct {
@@ -66,40 +65,35 @@ type RequestLine struct {
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := new(Request)
-	var bytesReaded int
-	var bytesParsed int
+	var numBytesReaded int
 
 	buff := make([]byte, buffSize)
 	for !request.isFullParsed {
-		nFromReader, err := reader.Read(buff)
-
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		buff = buff[:nFromReader]
 
 		isBufferFull := len(buff) == cap(buff)
+
 		if isBufferFull {
 			newBuff := make([]byte, 2*len(buff))
-			nCopy := copy(newBuff, buff)
-			buff = newBuff[:nCopy]
+			_ = copy(newBuff, buff)
+			buff = newBuff
 		}
 
-		bytesReaded += nFromReader
-		n, err := request.parse(buff)
+		numBytesRead, err := reader.Read(buff[numBytesReaded:])
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+
+		numBytesReaded += numBytesRead
+		numBytesParsed, err := request.parse(buff[:numBytesReaded])
 		if err != nil {
 			return nil, err
 		}
 
-		bytesParsed += n
-		if len(buff) > bytesParsed {
-			buff = buff[bytesParsed:]
-		}
+		copy(buff, buff[numBytesParsed:])
+		numBytesReaded -= numBytesParsed
 	}
 
 	return request, nil
@@ -131,14 +125,14 @@ func (r *Request) parse(data []byte) (int, error) {
 }
 
 func (r *Request) parseRequestLine(data []byte) (int, error) {
-	dataStr := string(data)
-	r.rawRequest += dataStr
-
-	if !strings.Contains(r.rawRequest, lineBreak) {
+	idx := bytes.Index(data, []byte(crlf))
+	if idx == -1 {
 		return 0, nil
 	}
 
-	requestPerLine := strings.Split(r.rawRequest, lineBreak)
+	requestLineText := string(data[:idx])
+
+	requestPerLine := strings.Split(requestLineText, crlf)
 
 	requestLine := requestPerLine[0]
 
