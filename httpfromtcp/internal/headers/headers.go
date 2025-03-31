@@ -14,16 +14,20 @@ const (
 	keyValSeparator = ":"
 )
 
+var (
+	crlfByte = []byte(crlf)
+)
+
 type Headers map[string]string
 
-func NewHeaders() Headers {
+func New() Headers {
 	return make(Headers)
 }
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
-	idx := bytes.Index(data, []byte(crlf))
+	idx := bytes.Index(data, crlfByte)
 	if idx == -1 {
-		return n, false, nil
+		return 0, false, nil
 	}
 
 	headerText := string(data[:idx])

@@ -7,14 +7,13 @@ import (
 	"io"
 	"strings"
 	"unicode"
+
+	"github.com/gpbPiazza/httpfromtcp/internal/headers"
 )
 
 const (
-	// carrieage return = \r
-	// line feed = \n
-	// carrieage return + line feed = CL
+	// carrieage return + line feed
 	crlf = "\r\n"
-
 	// single space = SP
 	space    = " "
 	buffSize = 8
@@ -48,11 +47,17 @@ var (
 
 type Request struct {
 	RequestLine RequestLine
-
-	// isFullParsed holds the state of a request
-	// while isFullParsed is false the request dint finish to parse yet
-	isFullParsed bool
+	Headers     headers.Headers
+	state       requestState
 }
+
+type requestState int
+
+const (
+	requestStateInitialized = iota
+	requestStateParsingHeaders
+	requestStateCompled
+)
 
 type RequestLine struct {
 	HttpVersion   string
@@ -61,11 +66,15 @@ type RequestLine struct {
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	request := new(Request)
+	request := &Request{
+		state:   requestStateInitialized,
+		Headers: headers.New(),
+	}
+
 	var numBytesReaded int
 
 	buff := make([]byte, buffSize)
-	for !request.isFullParsed {
+	for !request.isFullParsed() {
 		if numBytesReaded >= len(buff) {
 			newBuff := make([]byte, 2*len(buff))
 			_ = copy(newBuff, buff)
@@ -86,38 +95,76 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 			return nil, err
 		}
 
-		copy(buff, buff[numBytesParsed:])
+		newBuff := make([]byte, len(buff))
+		buffDst := buff[numBytesParsed:]
+		copy(newBuff, buffDst)
+		buff = newBuff
 		numBytesReaded -= numBytesParsed
 	}
 
 	return request, nil
 }
 
-func isAllCaps(s string) bool {
-	for _, r := range s {
-		if !unicode.IsLetter(r) {
-			return false
-		}
-		if !unicode.IsUpper(r) {
-			return false
-		}
-	}
-	return true
-}
-
 func (r *Request) parse(data []byte) (int, error) {
-	if r.isFullParsed {
-		return 0, errors.New("error: trying to parse data in a done state")
+	totalBytesParsed := 0
+
+	for r.state != requestStateCompled {
+		toBeParsed := data[totalBytesParsed:]
+
+		n, err := r.parseS(toBeParsed)
+		totalBytesParsed += n
+
+		if err != nil {
+			return 0, err
+		}
+
+		if totalBytesParsed > len(toBeParsed) {
+			return totalBytesParsed, nil
+		}
+
+		if n == 0 {
+			return totalBytesParsed, nil
+		}
 	}
 
-	n, err := r.parseRequestLine(data)
-	if err != nil {
-		return 0, err
-	}
-
-	return n, nil
+	return totalBytesParsed, nil
 }
 
+func (r *Request) parseS(data []byte) (int, error) {
+	fmt.Print("comming data ", "\n", "<==START==>", "\n", string(data))
+	fmt.Print("\n", "<==END==>")
+
+	switch r.state {
+	case requestStateInitialized:
+		n, err := r.parseRequestLine(data)
+		if err != nil {
+			return 0, err
+		}
+
+		if n == 0 {
+			return 0, nil
+		}
+
+		r.state = requestStateParsingHeaders
+		return n, nil
+	case requestStateParsingHeaders:
+		n, done, err := r.Headers.Parse(data)
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			r.state = requestStateCompled
+		}
+		return n, nil
+	case requestStateCompled:
+		return 0, errors.New("error: trying to parse data in a done state")
+	default:
+		return 0, errors.New("unknow request state")
+	}
+}
+
+// parseRequestLine will keep track of data until has all requestLine in data then will parse requestLine
+// parseRequestLine will set RequestLine values into request.
 func (r *Request) parseRequestLine(data []byte) (int, error) {
 	idx := bytes.Index(data, []byte(crlf))
 	if idx == -1 {
@@ -153,8 +200,6 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 	r.RequestLine.RequestTarget = target
 	r.RequestLine.Method = method
 
-	r.isFullParsed = true
-
 	numBytesParsed := idx + 2 // +2 due CRLF
 
 	return numBytesParsed, nil
@@ -177,6 +222,18 @@ func (r *Request) validateMethod(method string) error {
 	)
 }
 
+func isAllCaps(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLetter(r) {
+			return false
+		}
+		if !unicode.IsUpper(r) {
+			return false
+		}
+	}
+	return true
+}
+
 func (r *Request) validateHTTPVersion(httpV string, httpVSplited []string) error {
 	if len(httpVSplited) != 2 {
 		return errors.New("malformed http version expected <HTTP-NAME>/<digit>.<digit>")
@@ -191,4 +248,8 @@ func (r *Request) validateHTTPVersion(httpV string, httpVSplited []string) error
 	}
 
 	return nil
+}
+
+func (r *Request) isFullParsed() bool {
+	return r.state == requestStateCompled
 }
