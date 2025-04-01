@@ -24,6 +24,14 @@ func New() Headers {
 	return make(Headers)
 }
 
+// Get return Key value from Headers. Get is case insensitivity.
+// Get will retunr false if the given key has no value.
+func (h Headers) Get(key string) (string, bool) {
+	val, ok := h[strings.ToLower(key)]
+
+	return val, ok
+}
+
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	idx := bytes.Index(data, crlfByte)
 	if idx == -1 {

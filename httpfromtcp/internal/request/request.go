@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -12,6 +13,7 @@ import (
 )
 
 const (
+	lf = "\n"
 	// carrieage return + line feed
 	crlf = "\r\n"
 	// single space = SP
@@ -32,6 +34,9 @@ const (
 )
 
 var (
+	crlfByte = []byte(crlf)
+	lfByte   = []byte(lf)
+
 	AllMethods = []string{
 		MethodGet,
 		MethodHead,
@@ -48,7 +53,10 @@ var (
 type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
-	state       requestState
+	Body        []byte
+
+	state             requestState
+	bodyContentLenght *int
 }
 
 type requestState int
@@ -56,6 +64,7 @@ type requestState int
 const (
 	requestStateInitialized = iota
 	requestStateParsingHeaders
+	requestStateParsingBody
 	requestStateCompled
 )
 
@@ -150,9 +159,18 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 			return 0, err
 		}
 		if done {
-			r.state = requestStateCompled
+			r.state = requestStateParsingBody
 		}
 		return n, nil
+	case requestStateParsingBody:
+		numBytesParsed, done, err := r.parseBody(data)
+		if err != nil {
+			return numBytesParsed, err
+		}
+		if done {
+			r.state = requestStateCompled
+		}
+		return numBytesParsed, nil
 	case requestStateCompled:
 		return 0, errors.New("error: trying to parse data in a done state")
 	default:
@@ -197,7 +215,7 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 	r.RequestLine.RequestTarget = target
 	r.RequestLine.Method = method
 
-	numBytesParsed := len(requestLine) + 2 // +2 due CRLF
+	numBytesParsed := len(requestLine) + len(crlfByte)
 
 	return numBytesParsed, nil
 }
@@ -249,4 +267,55 @@ func (r *Request) validateHTTPVersion(httpV string, httpVSplited []string) error
 
 func (r *Request) isFullParsed() bool {
 	return r.state == requestStateCompled
+}
+
+func (r *Request) parseBody(data []byte) (int, bool, error) {
+	if len(data) == 0 {
+		return 0, false, nil
+	}
+
+	idx := bytes.Index(data, crlfByte)
+	if idx != -1 {
+		return len(crlfByte), false, nil
+	}
+
+	contentLenght, ok, err := r.contentLength()
+	if !ok {
+		return 0, false, errors.New("error: content length header is required")
+	}
+	if err != nil {
+		return 0, false, err
+	}
+
+	r.Body = append(r.Body, data...)
+
+	if len(r.Body) > contentLenght {
+		return 0, false, errors.New("error: content length informed is less than body length")
+	}
+
+	if len(r.Body) == contentLenght {
+		return len(data), true, nil
+	}
+
+	return len(data), false, nil
+}
+
+func (r *Request) contentLength() (int, bool, error) {
+	if r.bodyContentLenght != nil {
+		return *r.bodyContentLenght, true, nil
+	}
+
+	contentLenghtStr, ok := r.Headers.Get("content-length")
+	if !ok {
+		return 0, false, nil
+	}
+
+	contentLenght, err := strconv.Atoi(contentLenghtStr)
+	if err != nil {
+		return 0, false, errors.New("error: content length value is not an int")
+	}
+
+	r.bodyContentLenght = &contentLenght
+
+	return contentLenght, true, nil
 }
