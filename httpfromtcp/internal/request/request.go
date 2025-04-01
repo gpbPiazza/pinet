@@ -65,7 +65,7 @@ type RequestLine struct {
 	Method        string
 }
 
-func RequestFromReader(reader io.Reader) (*Request, error) {
+func ParseFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
 		state:   requestStateInitialized,
 		Headers: headers.New(),
@@ -111,8 +111,8 @@ func (r *Request) parse(data []byte) (int, error) {
 	for r.state != requestStateCompled {
 		toBeParsed := data[totalBytesParsed:]
 
-		n, err := r.parseS(toBeParsed)
-		totalBytesParsed += n
+		numBytesParsed, err := r.parseSingle(toBeParsed)
+		totalBytesParsed += numBytesParsed
 
 		if err != nil {
 			return 0, err
@@ -122,7 +122,7 @@ func (r *Request) parse(data []byte) (int, error) {
 			return totalBytesParsed, nil
 		}
 
-		if n == 0 {
+		if numBytesParsed == 0 {
 			return totalBytesParsed, nil
 		}
 	}
@@ -130,10 +130,7 @@ func (r *Request) parse(data []byte) (int, error) {
 	return totalBytesParsed, nil
 }
 
-func (r *Request) parseS(data []byte) (int, error) {
-	fmt.Print("comming data ", "\n", "<==START==>", "\n", string(data))
-	fmt.Print("\n", "<==END==>")
-
+func (r *Request) parseSingle(data []byte) (int, error) {
 	switch r.state {
 	case requestStateInitialized:
 		n, err := r.parseRequestLine(data)
@@ -171,8 +168,8 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 		return 0, nil
 	}
 
-	requestLineText := string(data[:idx])
-	requestPerLine := strings.Split(requestLineText, crlf)
+	requestText := string(data[:idx])
+	requestPerLine := strings.Split(requestText, crlf)
 	requestLine := requestPerLine[0]
 	requestLinePerSpace := strings.Split(requestLine, space)
 
@@ -200,7 +197,7 @@ func (r *Request) parseRequestLine(data []byte) (int, error) {
 	r.RequestLine.RequestTarget = target
 	r.RequestLine.Method = method
 
-	numBytesParsed := idx + 2 // +2 due CRLF
+	numBytesParsed := len(requestLine) + 2 // +2 due CRLF
 
 	return numBytesParsed, nil
 }

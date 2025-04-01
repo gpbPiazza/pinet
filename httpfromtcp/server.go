@@ -44,7 +44,7 @@ func (s *Server) Listen(address string) {
 		}
 		log.Print("conn accepted")
 
-		request, err := request.RequestFromReader(conn)
+		request, err := request.ParseFromReader(conn)
 		if err != nil {
 			log.Printf("error on parse request err: %s", err)
 		}

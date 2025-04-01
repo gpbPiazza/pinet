@@ -15,7 +15,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 1,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 		require.NoError(t, err)
 		require.NotNil(t, r)
 		assert.Equal(t, "GET", r.RequestLine.Method)
@@ -31,7 +31,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: len(data),
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.NoError(t, err)
 		require.NotNil(t, r)
@@ -46,7 +46,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 10,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -59,7 +59,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 8,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -72,7 +72,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 8,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -85,7 +85,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 8,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -98,7 +98,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 8,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -111,7 +111,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 8,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -124,7 +124,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 8,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.Nil(t, r)
 		require.Error(t, err)
@@ -137,7 +137,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 3,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.NoError(t, err)
 		require.NotNil(t, r)
@@ -154,7 +154,7 @@ func TestRequestLineParse(t *testing.T) {
 			numBytesPerRead: 1080,
 		}
 
-		r, err := RequestFromReader(reader)
+		r, err := ParseFromReader(reader)
 
 		require.NoError(t, err)
 		require.NotNil(t, r)
