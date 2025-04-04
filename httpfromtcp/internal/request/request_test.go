@@ -11,7 +11,11 @@ import (
 func TestParseFromReader(t *testing.T) {
 	t.Run("Good request line without request target method Get", func(t *testing.T) {
 		reader := &chunkReader{
-			data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			data: "GET / HTTP/1.1\r\n" +
+				"Host: localhost:42069\r\n" +
+				"User-Agent: curl/7.81.0\r\n" +
+				"Accept: */*\r\n" +
+				"\r\n",
 			numBytesPerRead: 1,
 		}
 
@@ -21,6 +25,7 @@ func TestParseFromReader(t *testing.T) {
 		assert.Equal(t, "GET", r.RequestLine.Method)
 		assert.Equal(t, "/", r.RequestLine.RequestTarget)
 		assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+		assert.Empty(t, r.Body)
 	})
 
 	t.Run("Good request line with request target", func(t *testing.T) {
@@ -38,6 +43,7 @@ func TestParseFromReader(t *testing.T) {
 		assert.Equal(t, "GET", r.RequestLine.Method)
 		assert.Equal(t, "/coffee", r.RequestLine.RequestTarget)
 		assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+		assert.Empty(t, r.Body)
 	})
 
 	t.Run("without http method", func(t *testing.T) {
@@ -150,7 +156,15 @@ func TestParseFromReader(t *testing.T) {
 		// this unit test is very important
 		// he is testing the whole macanism of parsing many data inside of the same chunk
 		reader := &chunkReader{
-			data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\n gremio: vamo0\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\ngremio: vamo1\r\ngremio: vamo2\r\ngremio: vamo3\r\n",
+			data: "GET / HTTP/1.1\r\n" +
+				"Host: localhost:42069\r\n" +
+				" gremio: vamo0\r\n" +
+				"User-Agent: curl/7.81.0\r\n" +
+				"Accept: */*\r\n" +
+				"gremio: vamo1\r\n" +
+				"gremio: vamo2\r\n" +
+				"gremio: vamo3\r\n" +
+				"\r\n",
 			numBytesPerRead: 1080,
 		}
 
@@ -181,6 +195,26 @@ func TestParseFromReader(t *testing.T) {
 		assert.Equal(t, "hello world!\n", string(r.Body))
 	})
 
+	t.Run("request with json body", func(t *testing.T) {
+		reader := &chunkReader{
+			data: "POST /coffee HTTP/1.1\r\n" +
+				"Host: localhost:42069\r\n" +
+				"User-Agent: curl/8.6.0\r\n" +
+				"Accept: */*\r\n" +
+				"Content-Type: application/json\r\n" +
+				"Content-Length: 22\r\n" +
+				"\r\n" +
+				"{\"flavor\":\"dark mode\"}",
+			numBytesPerRead: 25,
+		}
+
+		r, err := ParseFromReader(reader)
+
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		assert.Equal(t, "{\"flavor\":\"dark mode\"}", string(r.Body))
+	})
+
 	t.Run("Empty body reported zero length", func(t *testing.T) {
 		reader := &chunkReader{
 			data: "POST /submit HTTP/1.1\r\n" +
@@ -201,8 +235,7 @@ func TestParseFromReader(t *testing.T) {
 		reader := &chunkReader{
 			data: "POST /submit HTTP/1.1\r\n" +
 				"Host: localhost:42069\r\n" +
-				"\r\n" +
-				"\n",
+				"\r\n",
 			numBytesPerRead: 3,
 		}
 
@@ -213,22 +246,39 @@ func TestParseFromReader(t *testing.T) {
 		assert.Empty(t, r.Body)
 	})
 
-	// TODO implement this
-	// t.Run("Body shorter than reported content length", func(t *testing.T) {
-	// 	reader := &chunkReader{
-	// 		data: "POST /submit HTTP/1.1\r\n" +
-	// 			"Host: localhost:42069\r\n" +
-	// 			"Content-Length: 20\r\n" +
-	// 			"\r\n" +
-	// 			"partial content",
-	// 		numBytesPerRead: 3,
-	// 	}
+	t.Run("Body is bigger than reported content length", func(t *testing.T) {
+		reader := &chunkReader{
+			data: "POST /submit HTTP/1.1\r\n" +
+				"Host: localhost:42069\r\n" +
+				"Content-Length: 2\r\n" +
+				"\r\n" +
+				"partial content",
+			numBytesPerRead: 3,
+		}
 
-	// 	r, err := ParseFromReader(reader)
+		r, err := ParseFromReader(reader)
 
-	// 	require.Error(t, err)
-	// 	require.Nil(t, r)
-	// })
+		require.Error(t, err)
+		require.Nil(t, r)
+		assert.ErrorContains(t, err, "error: content length informed is less than body length")
+	})
+
+	t.Run("content lenght is not an int", func(t *testing.T) {
+		reader := &chunkReader{
+			data: "POST /submit HTTP/1.1\r\n" +
+				"Host: localhost:42069\r\n" +
+				"Content-Length: gremio\r\n" +
+				"\r\n" +
+				"partial content",
+			numBytesPerRead: 3,
+		}
+
+		r, err := ParseFromReader(reader)
+
+		require.Error(t, err)
+		require.Nil(t, r)
+		assert.ErrorContains(t, err, "error: content length value is not an int")
+	})
 
 	t.Run("No content length reported and has body", func(t *testing.T) {
 		reader := &chunkReader{

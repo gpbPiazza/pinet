@@ -1,4 +1,4 @@
-package httpfromtcp
+package server
 
 type options struct {
 }

@@ -1,8 +1,8 @@
 package main
 
-import "github.com/gpbPiazza/httpfromtcp"
+import "github.com/gpbPiazza/httpfromtcp/internal/server"
 
 func main() {
-	s := httpfromtcp.NewServer()
+	s := server.New()
 	s.Listen("42069")
 }

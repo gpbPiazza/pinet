@@ -39,9 +39,8 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	}
 
 	headerText := string(data[:idx])
-
 	if headerText == "" {
-		return 0, true, nil
+		return len(crlfByte), true, nil
 	}
 
 	sepIdx := strings.Index(headerText, keyValSeparator)

@@ -78,14 +78,14 @@ func TestHeadersParse(t *testing.T) {
 
 	t.Run("always set key header to lower case", func(t *testing.T) {
 		headers := New()
-		data := []byte("       VAMO GREMIO-PORRA!: 42069       \r\n\r\n")
+		data := []byte("       VAMO GREMIO-PORRA1!: 42069       \r\n\r\n")
 
 		n, done, err := headers.Parse(data)
 
 		require.NoError(t, err)
 		require.False(t, done)
-		assert.Equal(t, 41, n)
-		assert.Equal(t, headers["vamo gremio-porra!"], "42069")
+		assert.Equal(t, 42, n)
+		assert.Equal(t, headers["vamo gremio-porra1!"], "42069")
 	})
 
 	t.Run("return true when data is a only a crlf - the next line will be the body so parse headers is done", func(t *testing.T) {
@@ -96,7 +96,7 @@ func TestHeadersParse(t *testing.T) {
 
 		require.NoError(t, err)
 		require.True(t, done)
-		require.Zero(t, n)
+		require.Equal(t, 2, n)
 	})
 
 	t.Run("invalid headers with space between key name and :", func(t *testing.T) {

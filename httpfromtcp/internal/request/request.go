@@ -35,7 +35,6 @@ const (
 
 var (
 	crlfByte = []byte(crlf)
-	lfByte   = []byte(lf)
 
 	AllMethods = []string{
 		MethodGet,
@@ -78,6 +77,7 @@ func ParseFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
 		state:   requestStateInitialized,
 		Headers: headers.New(),
+		Body:    make([]byte, 0),
 	}
 
 	var numBytesReaded int
@@ -91,10 +91,18 @@ func ParseFromReader(reader io.Reader) (*Request, error) {
 		}
 
 		numBytesRead, err := reader.Read(buff[numBytesReaded:])
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
+		if errors.Is(err, io.EOF) {
+			if request.state != requestStateCompled {
+				return nil, fmt.Errorf(
+					"incomplete request, in state: %d, read n bytes on EOF: %d",
+					request.state,
+					numBytesRead,
+				)
 			}
+			break
+		}
+
+		if err != nil {
 			return nil, err
 		}
 
@@ -127,7 +135,7 @@ func (r *Request) parse(data []byte) (int, error) {
 			return 0, err
 		}
 
-		if totalBytesParsed > len(toBeParsed) {
+		if len(toBeParsed) == 0 {
 			return totalBytesParsed, nil
 		}
 
@@ -270,21 +278,17 @@ func (r *Request) isFullParsed() bool {
 }
 
 func (r *Request) parseBody(data []byte) (int, bool, error) {
-	if len(data) == 0 {
-		return 0, false, nil
-	}
-
-	idx := bytes.Index(data, crlfByte)
-	if idx != -1 {
-		return len(crlfByte), false, nil
-	}
-
 	contentLenght, ok, err := r.contentLength()
-	if !ok {
-		return 0, false, errors.New("error: content length header is required")
-	}
 	if err != nil {
 		return 0, false, err
+	}
+
+	if !ok && len(data) == 0 {
+		return 0, true, nil
+	}
+
+	if !ok {
+		return 0, false, errors.New("error: content length header is required")
 	}
 
 	r.Body = append(r.Body, data...)
