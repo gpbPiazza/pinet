@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gpbPiazza/httpfromtcp/internal/request"
+	"github.com/gpbPiazza/httpfromtcp/internal/response"
 )
 
 type Server struct {
@@ -86,10 +87,11 @@ func (s *Server) handleConn(conn net.Conn) {
 	fmt.Print("Body:\n")
 	fmt.Printf("%s\n", string(request.Body))
 
-	response := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!"
-
-	_, err = conn.Write([]byte(response))
-	if err != nil {
-		log.Printf("error - write conn err: %s", err)
+	respHeaders := response.DefaultHeaders(len(request.Body))
+	if err := response.WriteStatusLine(conn, response.StatusOK); err != nil {
+		log.Print(err)
+	}
+	if err := response.WriteHeaders(conn, respHeaders); err != nil {
+		log.Print(err)
 	}
 }

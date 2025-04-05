@@ -32,6 +32,23 @@ func (h Headers) Get(key string) (string, bool) {
 	return val, ok
 }
 
+// Add will insert a key value into header
+// Add will ensure case insensitivity.
+// If some key already has value add will concatenate the value separated by ",space".
+func (h Headers) Add(key, val string) {
+	key = strings.TrimSpace(key)
+	key = strings.ToLower(key)
+	val = strings.TrimSpace(val)
+
+	existingVal, ok := h[key]
+	if ok {
+		h[key] = fmt.Sprintf("%s, %s", existingVal, val)
+		return
+	}
+
+	h[key] = val
+}
+
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	idx := bytes.Index(data, crlfByte)
 	if idx == -1 {
@@ -55,16 +72,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, err
 	}
 
-	key = strings.TrimSpace(key)
-	key = strings.ToLower(key)
-	val = strings.TrimSpace(val)
-
-	existingVal, ok := h[key]
-	if ok {
-		h[key] = fmt.Sprintf("%s, %s", existingVal, val)
-	} else {
-		h[key] = val
-	}
+	h.Add(key, val)
 
 	numBytesParsed := idx + 2
 
