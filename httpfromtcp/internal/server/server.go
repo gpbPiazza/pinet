@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -13,10 +14,14 @@ import (
 type Server struct {
 	tcpListener net.Listener
 	isClosed    *atomic.Bool
+
+	handler Handler
 }
 
 func New(opts ...Option) *Server {
-	option := options{}
+	option := options{
+		handler: nil,
+	}
 
 	for _, opt := range opts {
 		opt.apply(&option)
@@ -27,6 +32,7 @@ func New(opts ...Option) *Server {
 
 	s := &Server{
 		isClosed: closed,
+		handler:  option.handler,
 	}
 
 	return s
@@ -70,28 +76,38 @@ func (s *Server) handleConn(conn net.Conn) {
 	}()
 
 	request, err := request.ParseFromReader(conn)
-
 	if err != nil {
-		log.Printf("error on parse request err: %s", err)
+		hErr := &HandlerError{
+			StatusCode: response.StatusBadRequest,
+			Message:    err.Error(),
+		}
+		if err := hErr.Write(conn); err != nil {
+			log.Printf("error to write into conn handler err: %s", err)
+		}
+		return
 	}
 
-	fmt.Print("Request line:\n")
-	fmt.Printf("- Method: %s\n", request.RequestLine.Method)
-	fmt.Printf("- Target: %s\n", request.RequestLine.RequestTarget)
-	fmt.Printf("- Version: %s\n", request.RequestLine.HttpVersion)
-
-	fmt.Print("Headers:\n")
-	for key, val := range request.Headers {
-		fmt.Printf("- %s: %s\n", key, val)
+	buff := bytes.NewBuffer([]byte{})
+	hErr := s.handler(buff, request)
+	if hErr != nil {
+		if err := hErr.Write(conn); err != nil {
+			log.Printf("error to write into conn handler err: %s", err)
+		}
+		return
 	}
-	fmt.Print("Body:\n")
-	fmt.Printf("%s\n", string(request.Body))
 
-	respHeaders := response.DefaultHeaders(len(request.Body))
 	if err := response.WriteStatusLine(conn, response.StatusOK); err != nil {
-		log.Print(err)
+		log.Printf("error to write status line err: %s", err)
 	}
+
+	body := buff.Bytes()
+	respHeaders := response.DefaultHeaders(len(body))
+
 	if err := response.WriteHeaders(conn, respHeaders); err != nil {
-		log.Print(err)
+		log.Printf("error to write headers err: %s", err)
+	}
+
+	if _, err := conn.Write(body); err != nil {
+		log.Printf("error to write body err: %s", err)
 	}
 }

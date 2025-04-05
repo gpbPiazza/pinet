@@ -57,3 +57,10 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 
 	return nil
 }
+
+type Writer struct {
+}
+
+func (w *Writer) WriteStatusLine(statusCode int) error
+func (w *Writer) WriteHeaders(headers headers.Headers) error
+func (w *Writer) WriteBody(p []byte) (int, error)
