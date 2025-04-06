@@ -1,6 +1,7 @@
 package response
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -12,35 +13,66 @@ const (
 	crfl = "\r\n"
 )
 
-func WriteStatusLine(w io.Writer, statusCode int) error {
+type writerState int
+
+const (
+	writerStateStatusLine writerState = iota
+	writerStateHeaders
+	writerStateBody
+)
+
+type Writer struct {
+	writer io.Writer
+	state  writerState
+}
+
+func NewWriter(w io.Writer) *Writer {
+	return &Writer{
+		writer: w,
+		state:  writerStateStatusLine,
+	}
+}
+
+func (w *Writer) WriteStatusLine(statusCode int) error {
+	if w.state != writerStateStatusLine {
+		return errors.New("status write has been already wrote")
+	}
+
 	httpVersion := "HTTP/1.1"
 	reasonPhrase := reasonPhrase(statusCode)
 
 	statusLine := fmt.Sprintf("%s %d %s%s", httpVersion, statusCode, reasonPhrase, crfl)
 
-	_, err := w.Write([]byte(statusLine))
+	_, err := w.writer.Write([]byte(statusLine))
 	if err != nil {
 		return fmt.Errorf("error: writing status line err: %s", err)
 	}
 
+	w.state = writerStateHeaders
 	return nil
 }
 
-func DefaultHeaders(contentLen int) headers.Headers {
-	headers := headers.New()
+func (w *Writer) WriteHeaders(headers headers.Headers) error {
+	if w.state != writerStateHeaders {
+		return errors.New("to writer header first you must write the status line")
+	}
 
-	headers.Add("Content-Length", fmt.Sprintf("%d", contentLen))
-	headers.Add("Connection", "close")
-	headers.Add("Content-Type", "text/plain")
+	headers.Set("Connection", "close")
 
-	return headers
-}
+	_, hasContentLength := headers.Get("Content-Length")
+	if !hasContentLength {
+		return errors.New("Content-Length header is required")
+	}
 
-func WriteHeaders(w io.Writer, headers headers.Headers) error {
+	_, hasContentType := headers.Get("Content-Type")
+	if !hasContentType {
+		headers.Set("Content-Type", "text/plain")
+	}
+
 	fieldLines := new(strings.Builder)
-
 	for key, val := range headers {
 		fiedlLine := fmt.Sprintf("%s: %s%s", key, val, crfl)
+
 		if _, err := fieldLines.WriteString(fiedlLine); err != nil {
 			return fmt.Errorf("error to write field line err: %s", err)
 		}
@@ -50,17 +82,19 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 		return fmt.Errorf("error to write field line err: %s", err)
 	}
 
-	_, err := w.Write([]byte(fieldLines.String()))
+	_, err := w.writer.Write([]byte(fieldLines.String()))
 	if err != nil {
 		return fmt.Errorf("error on write headers err: %s", err)
 	}
 
+	w.state = writerStateBody
 	return nil
 }
 
-type Writer struct {
-}
+func (w *Writer) WriteBody(body []byte) (int, error) {
+	if w.state != writerStateBody {
+		return 0, errors.New("to writer body first you must write the headers")
+	}
 
-func (w *Writer) WriteStatusLine(statusCode int) error
-func (w *Writer) WriteHeaders(headers headers.Headers) error
-func (w *Writer) WriteBody(p []byte) (int, error)
+	return w.writer.Write(body)
+}

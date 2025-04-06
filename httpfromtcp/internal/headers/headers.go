@@ -36,9 +36,7 @@ func (h Headers) Get(key string) (string, bool) {
 // Add will ensure case insensitivity.
 // If some key already has value add will concatenate the value separated by ",space".
 func (h Headers) Add(key, val string) {
-	key = strings.TrimSpace(key)
-	key = strings.ToLower(key)
-	val = strings.TrimSpace(val)
+	key, val = formatKeyVal(key, val)
 
 	existingVal, ok := h[key]
 	if ok {
@@ -47,6 +45,25 @@ func (h Headers) Add(key, val string) {
 	}
 
 	h[key] = val
+}
+
+// Set will ovewrite a key and value if the key already exist, if not will just add new key and value.
+func (h Headers) Set(key, val string) {
+	key, val = formatKeyVal(key, val)
+
+	_, ok := h[key]
+	if ok {
+		delete(h, key)
+	}
+
+	h[key] = val
+}
+
+func formatKeyVal(key, val string) (string, string) {
+	keyF := strings.ToLower(strings.TrimSpace(key))
+	valF := strings.TrimSpace(val)
+
+	return keyF, valF
 }
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {

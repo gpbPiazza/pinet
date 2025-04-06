@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -27,7 +26,7 @@ func New(opts ...Option) *Server {
 		opt.apply(&option)
 	}
 
-	closed := &atomic.Bool{}
+	closed := new(atomic.Bool)
 	closed.Store(false)
 
 	s := &Server{
@@ -76,38 +75,23 @@ func (s *Server) handleConn(conn net.Conn) {
 	}()
 
 	request, err := request.ParseFromReader(conn)
+	resp := response.NewWriter(conn)
 	if err != nil {
 		hErr := &HandlerError{
 			StatusCode: response.StatusBadRequest,
 			Message:    err.Error(),
 		}
-		if err := hErr.Write(conn); err != nil {
+		if err := hErr.Write(resp); err != nil {
 			log.Printf("error to write into conn handler err: %s", err)
 		}
 		return
 	}
 
-	buff := bytes.NewBuffer([]byte{})
-	hErr := s.handler(buff, request)
+	hErr := s.handler(resp, request)
 	if hErr != nil {
-		if err := hErr.Write(conn); err != nil {
+		if err := hErr.Write(resp); err != nil {
 			log.Printf("error to write into conn handler err: %s", err)
 		}
 		return
-	}
-
-	if err := response.WriteStatusLine(conn, response.StatusOK); err != nil {
-		log.Printf("error to write status line err: %s", err)
-	}
-
-	body := buff.Bytes()
-	respHeaders := response.DefaultHeaders(len(body))
-
-	if err := response.WriteHeaders(conn, respHeaders); err != nil {
-		log.Printf("error to write headers err: %s", err)
-	}
-
-	if _, err := conn.Write(body); err != nil {
-		log.Printf("error to write body err: %s", err)
 	}
 }
