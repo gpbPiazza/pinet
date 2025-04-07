@@ -283,7 +283,9 @@ func (r *Request) parseBody(data []byte) (int, bool, error) {
 		return 0, false, err
 	}
 
-	if !ok && len(data) == 0 {
+	idx := bytes.Index(data, []byte("\n"))
+
+	if !ok && len(data) == 0 || !ok && idx == 0 {
 		return 0, true, nil
 	}
 

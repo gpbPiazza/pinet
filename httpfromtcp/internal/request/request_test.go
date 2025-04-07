@@ -28,6 +28,21 @@ func TestParseFromReader(t *testing.T) {
 		assert.Empty(t, r.Body)
 	})
 
+	t.Run("Good request with \n at the end of the body", func(t *testing.T) {
+		reader := &chunkReader{
+			data:            "GET /httpbin/stream/100 HTTP/1.1\r\nHost: localhost:42069\r\nConnection: close\r\n\r\n\n",
+			numBytesPerRead: 18,
+		}
+
+		r, err := ParseFromReader(reader)
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		assert.Equal(t, "GET", r.RequestLine.Method)
+		assert.Equal(t, "/httpbin/stream/100", r.RequestLine.RequestTarget)
+		assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+		assert.Empty(t, r.Body)
+	})
+
 	t.Run("Good request line with request target", func(t *testing.T) {
 		data := "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"
 
