@@ -81,7 +81,6 @@ func ParseFromReader(reader io.Reader) (*Request, error) {
 	}
 
 	var numBytesReaded int
-
 	buff := make([]byte, buffSize)
 	for !request.isFullParsed() {
 		if numBytesReaded >= len(buff) {

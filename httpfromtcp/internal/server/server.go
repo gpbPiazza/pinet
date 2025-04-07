@@ -86,21 +86,12 @@ func (s *Server) handleConn(conn net.Conn, connID string) {
 	request, err := request.ParseFromReader(conn)
 	resp := response.NewWriter(conn)
 	if err != nil {
-		hErr := &HandlerError{
-			StatusCode: response.StatusBadRequest,
-			Message:    err.Error(),
-		}
-		if err := hErr.Write(conn); err != nil {
-			log.Printf("conn ID: %s - error to write into conn handler err: %s", err, connID)
-		}
+		resp.WriteStatusLine(response.StatusBadRequest)
+		body := []byte(fmt.Sprintf("Error parsing request: %v", err))
+		resp.WriteHeaders(response.DefaultHeaders(len(body)))
+		resp.WriteBody(body)
 		return
 	}
 
-	hErr := s.handler(resp, request)
-	if hErr != nil {
-		if err := hErr.Write(conn); err != nil {
-			log.Printf("conn ID: %s - error to write into conn handler err: %s", err, connID)
-		}
-		return
-	}
+	s.handler(resp, request)
 }

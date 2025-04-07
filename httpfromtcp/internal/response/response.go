@@ -33,9 +33,19 @@ func NewWriter(w io.Writer) *Writer {
 	}
 }
 
+func DefaultHeaders(bodyLen int) headers.Headers {
+	h := headers.New()
+
+	h.Override("Connection", "close")
+	h.Override("Content-Type", "text/plain")
+	h.Override("Content-Length", fmt.Sprintf("%d", bodyLen))
+
+	return h
+}
+
 func (w *Writer) WriteStatusLine(statusCode int) error {
 	if w.state != writerStateStatusLine {
-		return errors.New("status write has been already wrote")
+		return fmt.Errorf("cannot write statys line in state %d", w.state)
 	}
 
 	httpVersion := "HTTP/1.1"
@@ -54,19 +64,7 @@ func (w *Writer) WriteStatusLine(statusCode int) error {
 
 func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	if w.state != writerStateHeaders {
-		return errors.New("to writer header first you must write the status line")
-	}
-
-	headers.Set("Connection", "close")
-
-	_, hasContentLength := headers.Get("Content-Length")
-	if !hasContentLength {
-		return errors.New("Content-Length header is required")
-	}
-
-	_, hasContentType := headers.Get("Content-Type")
-	if !hasContentType {
-		headers.Set("Content-Type", "text/plain")
+		return fmt.Errorf("cannot write headers in state %d", w.state)
 	}
 
 	fieldLines := new(strings.Builder)
@@ -97,4 +95,90 @@ func (w *Writer) WriteBody(body []byte) (int, error) {
 	}
 
 	return w.writer.Write(body)
+}
+
+// WriteChunkedBody will write into conn the body in following format below:
+//
+// HTTP/1.1 200 OK
+// Content-Type: text/plain
+// Transfer-Encoding: chunked
+//
+// <n>/r/n
+// <data of length n>/r/n
+// <n>/r/n
+// <data of length n>/r/n
+// <n>/r/n
+// <data of length n>/r/n
+// <n>/r/n
+// <data of length n>/r/n
+// ... repeat ...
+// 0\r\n
+// \r\n
+//
+// Where n is the len of the bytes content and the next line is the content.
+//
+// WriteChunkedBody will write a new line in the chunked body to each call.
+//
+// To finish writing into chunked body you must call WriteChunkedBodyDone.
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	if w.state != writerStateBody {
+		return 0, fmt.Errorf("cannot write body in state %d", w.state)
+	}
+	chunkSize := len(p)
+
+	nTotal := 0
+	n, err := fmt.Fprintf(w.writer, "%x%s", chunkSize, crfl)
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+
+	n, err = w.writer.Write(p)
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+
+	n, err = w.writer.Write([]byte(crfl))
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+	return nTotal, nil
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	if w.state != writerStateBody {
+		return 0, fmt.Errorf("cannot write body in state %d", w.state)
+	}
+
+	return w.writer.Write([]byte(fmt.Sprintf("%d%s", 0, crfl)))
+}
+
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	trailers, ok := h.Get("Trailer")
+	if !ok {
+		return errors.New("no trailer header key")
+	}
+
+	trailerNames := strings.Split(trailers, headers.ValSeparator)
+
+	for _, tName := range trailerNames {
+		tVal, ok := h.Get(tName)
+		if !ok {
+			return errors.New("registered trailer name not present into header")
+		}
+
+		_, err := w.writer.Write([]byte(fmt.Sprintf("%s: %s%s", tName, tVal, crfl)))
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err := w.writer.Write([]byte(crfl))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

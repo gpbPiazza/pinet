@@ -12,6 +12,7 @@ const (
 	// single space = SP
 	space           = " "
 	keyValSeparator = ":"
+	ValSeparator    = ", "
 )
 
 var (
@@ -44,7 +45,7 @@ func (h Headers) Add(key, val string) {
 
 	existingVal, ok := h[key]
 	if ok {
-		h[key] = fmt.Sprintf("%s, %s", existingVal, val)
+		h[key] = fmt.Sprintf("%s%s%s", existingVal, ValSeparator, val)
 		return
 	}
 
@@ -55,8 +56,8 @@ func (h Headers) Delete(key string) {
 	delete(h, keyf(key))
 }
 
-// Set will ovewrite a key and value if the key already exist, if not will just add new key and value.
-func (h Headers) Set(key, val string) {
+// Override will ovewrite a key and value if the key already exist, if not will just add new key and value.
+func (h Headers) Override(key, val string) {
 	key, val = keyValf(key, val)
 
 	_, ok := h[key]
