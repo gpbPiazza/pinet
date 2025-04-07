@@ -3,8 +3,10 @@ package server
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/gpbPiazza/httpfromtcp/internal/request"
 	"github.com/gpbPiazza/httpfromtcp/internal/response"
@@ -61,17 +63,24 @@ func (s *Server) Listen(address string) {
 		if err != nil {
 			log.Fatalf("Server - error on accept conn err: %s", err)
 		}
-		log.Print("conn accepted")
+		connID := newID()
+		log.Printf("conn ID: %s - conn accepted", connID)
 
-		go s.handleConn(conn)
+		go s.handleConn(conn, connID)
 	}
 }
 
-func (s *Server) handleConn(conn net.Conn) {
+func newID() string {
+	newRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return fmt.Sprintf("%d", newRand.Int63())
+}
+
+func (s *Server) handleConn(conn net.Conn, connID string) {
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Printf("error o closing conn err: %s", err)
+			log.Printf("conn ID: %s - error o closing conn err: %s", err, connID)
 		}
+		log.Printf("conn ID: %s - conn closed", connID)
 	}()
 
 	request, err := request.ParseFromReader(conn)
@@ -81,16 +90,16 @@ func (s *Server) handleConn(conn net.Conn) {
 			StatusCode: response.StatusBadRequest,
 			Message:    err.Error(),
 		}
-		if err := hErr.Write(resp); err != nil {
-			log.Printf("error to write into conn handler err: %s", err)
+		if err := hErr.Write(conn); err != nil {
+			log.Printf("conn ID: %s - error to write into conn handler err: %s", err, connID)
 		}
 		return
 	}
 
 	hErr := s.handler(resp, request)
 	if hErr != nil {
-		if err := hErr.Write(resp); err != nil {
-			log.Printf("error to write into conn handler err: %s", err)
+		if err := hErr.Write(conn); err != nil {
+			log.Printf("conn ID: %s - error to write into conn handler err: %s", err, connID)
 		}
 		return
 	}
