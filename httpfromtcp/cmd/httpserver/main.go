@@ -24,6 +24,11 @@ func main() {
 			return
 		}
 
+		if strings.HasPrefix(req.RequestLine.RequestTarget, "/video") {
+			handleVideo(w, req)
+			return
+		}
+
 		if req.RequestLine.RequestTarget == "/yourproblem" {
 			handler400(w, req)
 			return
@@ -53,6 +58,28 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 	log.Println("Server gracefully stopped")
+}
+
+func handleVideo(w *response.Writer, req *request.Request) {
+	file, err := os.Open("./assets/vim.mp4")
+	if err != nil {
+		log.Printf("err to open file err: %s", err)
+		handler500(w, req)
+		return
+	}
+
+	body, err := io.ReadAll(file)
+	if err != nil {
+		log.Printf("err to readAll file err: %s", err)
+		handler500(w, req)
+		return
+	}
+
+	w.WriteStatusLine(response.StatusOK)
+	h := response.DefaultHeaders(len(body))
+	h.Override("Content-Type", "video/mp4")
+	w.WriteHeaders(h)
+	w.WriteBody(body)
 }
 
 func handlerProxyStream(w *response.Writer, req *request.Request) {
