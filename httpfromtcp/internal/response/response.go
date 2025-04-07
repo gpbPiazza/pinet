@@ -19,6 +19,7 @@ const (
 	writerStateStatusLine writerState = iota
 	writerStateHeaders
 	writerStateBody
+	writerStateTrailers
 )
 
 type Writer struct {
@@ -47,6 +48,7 @@ func (w *Writer) WriteStatusLine(statusCode int) error {
 	if w.state != writerStateStatusLine {
 		return fmt.Errorf("cannot write statys line in state %d", w.state)
 	}
+	defer func() { w.state = writerStateHeaders }()
 
 	httpVersion := "HTTP/1.1"
 	reasonPhrase := reasonPhrase(statusCode)
@@ -58,7 +60,6 @@ func (w *Writer) WriteStatusLine(statusCode int) error {
 		return fmt.Errorf("error: writing status line err: %s", err)
 	}
 
-	w.state = writerStateHeaders
 	return nil
 }
 
@@ -66,6 +67,7 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	if w.state != writerStateHeaders {
 		return fmt.Errorf("cannot write headers in state %d", w.state)
 	}
+	defer func() { w.state = writerStateBody }()
 
 	fieldLines := new(strings.Builder)
 	for key, val := range headers {
@@ -85,7 +87,6 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 		return fmt.Errorf("error on write headers err: %s", err)
 	}
 
-	w.state = writerStateBody
 	return nil
 }
 
@@ -93,6 +94,8 @@ func (w *Writer) WriteBody(body []byte) (int, error) {
 	if w.state != writerStateBody {
 		return 0, errors.New("to writer body first you must write the headers")
 	}
+
+	defer func() { w.state = writerStateTrailers }()
 
 	return w.writer.Write(body)
 }
@@ -152,10 +155,16 @@ func (w *Writer) WriteChunkedBodyDone() (int, error) {
 		return 0, fmt.Errorf("cannot write body in state %d", w.state)
 	}
 
+	defer func() { w.state = writerStateTrailers }()
+
 	return w.writer.Write([]byte(fmt.Sprintf("%d%s", 0, crfl)))
 }
 
 func (w *Writer) WriteTrailers(h headers.Headers) error {
+	if w.state != writerStateTrailers {
+		return fmt.Errorf("cannot write trailer body in state %d", w.state)
+	}
+
 	trailers, ok := h.Get("Trailer")
 	if !ok {
 		return errors.New("no trailer header key")
