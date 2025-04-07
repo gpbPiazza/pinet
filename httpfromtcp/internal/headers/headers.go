@@ -27,16 +27,20 @@ func New() Headers {
 // Get return Key value from Headers. Get is case insensitivity.
 // Get will retunr false if the given key has no value.
 func (h Headers) Get(key string) (string, bool) {
-	val, ok := h[strings.ToLower(key)]
+	val, ok := h[keyf(key)]
 
 	return val, ok
+}
+
+func keyf(key string) string {
+	return strings.ToLower(strings.TrimSpace(key))
 }
 
 // Add will insert a key value into header
 // Add will ensure case insensitivity.
 // If some key already has value add will concatenate the value separated by ",space".
 func (h Headers) Add(key, val string) {
-	key, val = formatKeyVal(key, val)
+	key, val = keyValf(key, val)
 
 	existingVal, ok := h[key]
 	if ok {
@@ -47,9 +51,13 @@ func (h Headers) Add(key, val string) {
 	h[key] = val
 }
 
+func (h Headers) Delete(key string) {
+	delete(h, keyf(key))
+}
+
 // Set will ovewrite a key and value if the key already exist, if not will just add new key and value.
 func (h Headers) Set(key, val string) {
-	key, val = formatKeyVal(key, val)
+	key, val = keyValf(key, val)
 
 	_, ok := h[key]
 	if ok {
@@ -59,8 +67,8 @@ func (h Headers) Set(key, val string) {
 	h[key] = val
 }
 
-func formatKeyVal(key, val string) (string, string) {
-	keyF := strings.ToLower(strings.TrimSpace(key))
+func keyValf(key, val string) (string, string) {
+	keyF := keyf(key)
 	valF := strings.TrimSpace(val)
 
 	return keyF, valF
