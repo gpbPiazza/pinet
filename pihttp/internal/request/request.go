@@ -17,8 +17,8 @@ const (
 	// carrieage return + line feed
 	crlf = "\r\n"
 	// single space = SP
-	space    = " "
-	buffSize = 8
+	space            = " "
+	parserBufferSize = 8
 
 	httpVSuported = "HTTP/1.1"
 
@@ -48,6 +48,11 @@ var (
 		MethodTrace,
 	}
 )
+
+// <Request line>   \r\n
+// <Headers>        \r\n
+// <Body>           \r\n
+// <end of request> \r\n
 
 type Request struct {
 	RequestLine RequestLine
@@ -81,7 +86,7 @@ func ParseFromReader(reader io.Reader) (*Request, error) {
 	}
 
 	var numBytesReaded int
-	buff := make([]byte, buffSize)
+	buff := make([]byte, parserBufferSize)
 	for !request.isFullParsed() {
 		if numBytesReaded >= len(buff) {
 			newBuff := make([]byte, 2*len(buff))
@@ -134,11 +139,11 @@ func (r *Request) parse(data []byte) (int, error) {
 			return 0, err
 		}
 
-		if len(toBeParsed) == 0 {
+		if len(toBeParsed) == 0 || numBytesParsed == 0 { // does we finished parsing the chunk?
 			return totalBytesParsed, nil
 		}
 
-		if numBytesParsed == 0 {
+		if numBytesParsed == 0 { // does we finish parsing?
 			return totalBytesParsed, nil
 		}
 	}
