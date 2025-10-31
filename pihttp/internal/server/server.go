@@ -59,10 +59,6 @@ func (s *Server) Listen(address string) {
 			break
 		}
 
-		// keep the connection open due some time
-		// manage the state of how many conns opens do you have
-		// be sure to not accept por conns whe you are full
-
 		conn, err := s.tcpListener.Accept()
 		if err != nil {
 			log.Fatalf("Server - error on accept conn err: %s", err)
