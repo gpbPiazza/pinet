@@ -132,18 +132,14 @@ func (r *Request) parse(data []byte) (int, error) {
 	for r.state != requestStateCompled {
 		toBeParsed := data[totalBytesParsed:]
 
-		numBytesParsed, err := r.parseSingle(toBeParsed)
+		numBytesParsed, err := r.parseChunk(toBeParsed)
 		totalBytesParsed += numBytesParsed
 
 		if err != nil {
 			return 0, err
 		}
 
-		if len(toBeParsed) == 0 || numBytesParsed == 0 { // does we finished parsing the chunk?
-			return totalBytesParsed, nil
-		}
-
-		if numBytesParsed == 0 { // does we finish parsing?
+		if len(toBeParsed) == 0 || numBytesParsed == 0 {
 			return totalBytesParsed, nil
 		}
 	}
@@ -151,7 +147,7 @@ func (r *Request) parse(data []byte) (int, error) {
 	return totalBytesParsed, nil
 }
 
-func (r *Request) parseSingle(data []byte) (int, error) {
+func (r *Request) parseChunk(data []byte) (int, error) {
 	switch r.state {
 	case requestStateInitialized:
 		n, err := r.parseRequestLine(data)
@@ -287,8 +283,8 @@ func (r *Request) parseBody(data []byte) (int, bool, error) {
 		return 0, false, err
 	}
 
+	// does the chunk that is at the end of the body?
 	idx := bytes.Index(data, []byte("\n"))
-
 	if !ok && len(data) == 0 || !ok && idx == 0 {
 		return 0, true, nil
 	}

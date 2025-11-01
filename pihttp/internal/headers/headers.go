@@ -91,8 +91,9 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, fmt.Errorf("malformed headers - not find header separator : - headers: %s", headerText)
 	}
 
+	sepIdxFroValue := sepIdx + len(keyValSeparator)
 	key := headerText[:sepIdx]
-	val := headerText[sepIdx+1:]
+	val := headerText[sepIdxFroValue:]
 
 	if err := h.valiadteKey(key); err != nil {
 		return 0, false, err

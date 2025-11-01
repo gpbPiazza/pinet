@@ -61,7 +61,7 @@ func main() {
 }
 
 func handleVideo(w *response.Writer, req *request.Request) {
-	file, err := os.Open("./assets/vim.mp4")
+	file, err := os.Open("./assets/it_works.mov")
 	if err != nil {
 		log.Printf("err to open file err: %s", err)
 		handler500(w, req)

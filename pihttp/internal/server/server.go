@@ -86,10 +86,10 @@ func (s *Server) handleConn(conn net.Conn, connID string) {
 	request, err := request.ParseFromReader(conn)
 	resp := response.NewWriter(conn)
 	if err != nil {
-		resp.WriteStatusLine(response.StatusBadRequest)
+		_ = resp.WriteStatusLine(response.StatusBadRequest)
 		body := []byte(fmt.Sprintf("Error parsing request: %v", err))
-		resp.WriteHeaders(response.DefaultHeaders(len(body)))
-		resp.WriteBody(body)
+		_ = resp.WriteHeaders(response.DefaultHeaders(len(body)))
+		_, _ = resp.WriteBody(body)
 		return
 	}
 

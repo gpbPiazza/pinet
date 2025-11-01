@@ -46,7 +46,7 @@ func DefaultHeaders(bodyLen int) headers.Headers {
 
 func (w *Writer) WriteStatusLine(statusCode int) error {
 	if w.state != writerStateStatusLine {
-		return fmt.Errorf("cannot write statys line in state %d", w.state)
+		return fmt.Errorf("cannot write status line in state %d", w.state)
 	}
 	defer func() { w.state = writerStateHeaders }()
 
@@ -123,31 +123,31 @@ func (w *Writer) WriteBody(body []byte) (int, error) {
 // WriteChunkedBody will write a new line in the chunked body to each call.
 //
 // To finish writing into chunked body you must call WriteChunkedBodyDone.
-func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+func (w *Writer) WriteChunkedBody(chunk []byte) (int, error) {
 	if w.state != writerStateBody {
 		return 0, fmt.Errorf("cannot write body in state %d", w.state)
 	}
-	chunkSize := len(p)
+	chunkSize := len(chunk)
 
-	nTotal := 0
-	n, err := fmt.Fprintf(w.writer, "%x%s", chunkSize, crfl)
+	numberTotal := 0
+	numberBytes, err := fmt.Fprintf(w.writer, "%x%s", chunkSize, crfl)
 	if err != nil {
-		return nTotal, err
+		return numberTotal, err
 	}
-	nTotal += n
+	numberTotal += numberBytes
 
-	n, err = w.writer.Write(p)
+	numberBytes, err = w.writer.Write(chunk)
 	if err != nil {
-		return nTotal, err
+		return numberTotal, err
 	}
-	nTotal += n
+	numberTotal += numberBytes
 
-	n, err = w.writer.Write([]byte(crfl))
+	numberBytes, err = w.writer.Write([]byte(crfl))
 	if err != nil {
-		return nTotal, err
+		return numberTotal, err
 	}
-	nTotal += n
-	return nTotal, nil
+	numberTotal += numberBytes
+	return numberTotal, nil
 }
 
 func (w *Writer) WriteChunkedBodyDone() (int, error) {
@@ -160,12 +160,12 @@ func (w *Writer) WriteChunkedBodyDone() (int, error) {
 	return w.writer.Write([]byte(fmt.Sprintf("%d%s", 0, crfl)))
 }
 
-func (w *Writer) WriteTrailers(h headers.Headers) error {
+func (w *Writer) WriteTrailers(header headers.Headers) error {
 	if w.state != writerStateTrailers {
 		return fmt.Errorf("cannot write trailer body in state %d", w.state)
 	}
 
-	trailers, ok := h.Get("Trailer")
+	trailers, ok := header.Get("Trailer")
 	if !ok {
 		return errors.New("no trailer header key")
 	}
@@ -173,7 +173,7 @@ func (w *Writer) WriteTrailers(h headers.Headers) error {
 	trailerNames := strings.Split(trailers, headers.ValSeparator)
 
 	for _, tName := range trailerNames {
-		tVal, ok := h.Get(tName)
+		tVal, ok := header.Get(tName)
 		if !ok {
 			return errors.New("registered trailer name not present into header")
 		}
